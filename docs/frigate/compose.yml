@@ -1,0 +1,46 @@
+services:
+  frigate:
+    container_name: frigate
+    image: ghcr.io/blakeblackshear/frigate:stable
+    restart: unless-stopped
+
+    # Only needed if you pass through hardware devices below (USB Coral / GPU).
+    # Safe to remove privileged if you're not using either.
+    privileged: true
+
+    shm_size: "512mb" # bump this up if you add more cameras or higher resolutions
+
+    devices:
+      # --- Optional: Coral USB TPU for fast object detection. Remove if you don't have one.
+      # - /dev/bus/usb:/dev/bus/usb
+
+      # --- Optional: Intel iGPU hardware-accelerated decoding (VAAPI/QSV). Remove if not applicable.
+      # - /dev/dri/renderD128:/dev/dri/renderD128
+      []
+
+    volumes:
+      # This file is managed as a Dokploy "File Mount" (Advanced -> Mounts),
+      # NOT a folder on disk — see deployment notes.
+      # Recordings + snapshots as a named volume (persists across redeploys,
+      - ../files/config.yml:/config/config.yml
+      # and can be backed up via Dokploy's Volume Backups feature).
+      - /mnt/frigate-storage:/media/frigate
+      - type: tmpfs
+        target: /tmp/cache
+        tmpfs:
+          size: 1000000000 # 1GB — used as scratch space during recording segments
+      - /etc/localtime:/etc/localtime:ro
+
+    ports:
+      - "8971:8971"   # Web UI (authenticated) — safe to expose via your Cloudflare Tunnel
+      - "5000:5000"   # Web UI (no auth) — keep this LAN-only, don't tunnel it
+      - "8554:8554"   # RTSP restream (go2rtc)
+      - "8555:8555/tcp" # WebRTC
+      - "8555:8555/udp"
+
+    environment:
+      FRIGATE_RTSP_PASSWORD: ${FRIGATE_PASSWORD}
+
+volumes:
+  frigate-storage:
+    name: frigate-storage

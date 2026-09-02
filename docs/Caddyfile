@@ -1,0 +1,4 @@
+capilabs.dev, *.capilabs.dev {
+	tls /data/certs/cloudflare.crt /data/certs/cloudflare.key
+	reverse_proxy cloudbeaver:8978
+}

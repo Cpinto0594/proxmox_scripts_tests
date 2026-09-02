@@ -1,0 +1,113 @@
+name: cloudflare-ddns
+services:
+  cloudflare-ddns:
+    image: favonia/cloudflare-ddns:latest
+    container_name: cloudflare-ddns
+    restart: unless-stopped
+    environment:
+      # Tu token de API con permisos "Zona - DNS - Editar"
+      - CLOUDFLARE_API_TOKEN=
+      # Dominios separados por comas (usa '@' o déjalo vacío para el dominio raíz)
+      - DOMAINS=*.capilabs.dev,capilabs.dev
+      # Intervalo de actualización (por defecto son 5 minutos)
+      - UPDATE_CRON=@every 5m
+      # Cambiar a 'true' si quieres ocultar tu IP real tras el proxy de Cloudflare
+      - PROXIED=true
+    networks:
+      - infra-network
+
+  hola_mundo:
+    image: nginxdemos/hello:plain-text
+    container_name: app_hola_mundo
+    restart: unless-stopped
+    profiles:
+      - donotstart
+    ports:
+      # Expone la app "Hola Mundo" en el puerto 8080
+      - "8080:80"
+    
+  cloudbeaver:
+    image: dbeaver/cloudbeaver:latest
+    container_name: cloudbeaver
+    ports:
+      - "127.0.0.1:8978:8978"
+    #environment:
+    #  - CLOUDBEAVER_FORCE_HTTPS=false( is default true)
+    networks:
+      - infra-network
+    profiles:
+      - donotstart
+    volumes:
+      - ./docs/services-data/cloudbeaver_data:/opt/cloudbeaver/workspace
+
+  #For cloudbeaver you need to add a custom nginx config use file cloudbeaver.conf
+  nginx-proxy-manager:
+    image: 'jc21/nginx-proxy-manager:2.15.1'
+    container_name: nginx-proxy-manager
+    restart: unless-stopped
+    profiles:
+      - donotstart
+    ports:
+      # These ports are in format <host-port>:<container-port>
+      - '80:80' # Public HTTP Port
+      - '443:443' # Public HTTPS Port
+      - '8190:81' # Admin Web Port
+      # Add any other Stream port you want to expose
+      # - '21:21' # FTP
+
+    #environment:
+    #  TZ: "Australia/Brisbane"
+
+      # Uncomment this if you want to change the location of
+      # the SQLite DB file within the container
+      # DB_SQLITE_FILE: "/data/database.sqlite"
+
+      # Uncomment this if IPv6 is not enabled on your host
+      # DISABLE_IPV6: 'true'
+    networks:
+      - infra-network
+    volumes:
+      - ./docs/services-data/nginx-proxy-manager:/data
+      - ./docs/services-data/letsencrypt:/etc/letsencrypt
+  
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare_tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      # PASTE YOUR TOKEN BELOW (Keep the token inside the quotes)
+      - TUNNEL_TOKEN=
+    networks:
+      - infra-network
+    depends_on:
+      - cloudflare-ddns
+  
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "9443:9443"
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./docs/services-data/portainer_data:/data
+    networks:
+      - infra-network
+
+
+networks:
+  infra-network:
+    name: infra-network
+    external: true
+
+volumes:
+  cloudbeaver_data:
+    driver: local
+  nginx-proxy-manager:
+    driver: local
+  portainer_data:
+    driver: local
