@@ -1,0 +1,83 @@
+
+# -----------------------------------------------------------------------------
+# Tenant-os PostgreSQL
+# -----------------------------------------------------------------------------
+
+services:
+  tenant-os-tenants-db-server:
+    image: postgres:17.11-alpine
+    restart: always #unless-stopped
+    container_name: tenant-os-tenants-db-server
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}   # set via Dokploy's Environment tab, see README
+      DATABASUS_BACKUP_USER: ${DATABASUS_BACKUP_USER}
+      DATABASUS_BACKUP_PASSWORD: ${DATABASUS_BACKUP_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - tenant-os-tenants-db-server:/var/lib/postgresql/data
+      - ../files/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ../files/init-databasus-backup-user.sh:/docker-entrypoint-initdb.d/init-databasus-backup-user.sh:ro
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    ports:
+      - target: 5432
+        published: 54322
+        protocol: tcp
+        mode: host
+        host_ip: "${TAILSCALE_IP}"
+      - target: 5432
+        published: 54322
+        protocol: tcp
+        mode: host
+        host_ip: "${DOCKER_NODE_IP}"        # enable node ip .40/24
+    shm_size: "256mb"
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    stop_grace_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
+        reservations:
+          cpus: "1.0"
+          memory: 2G
+      restart_policy:
+        condition: always
+        delay: 5s
+        #max_attempts: 5
+        #window: 120s
+      placement:
+        constraints:
+          - node.hostname == docker-dev-1
+    networks:
+      - dokploy-network   # lets cloudflared reach it directly, bypassing Traefik
+
+
+volumes:
+  tenant-os-tenants-db-server:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/tenant-os-tenants-db-server   # local NVMe/SSD path on docker-dev-1, create it first
+
+networks:
+  dokploy-network:
+    external: true

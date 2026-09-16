@@ -1,0 +1,49 @@
+services:
+  databasus:
+    image: databasus/databasus:latest
+    container_name: databasus
+    restart: unless-stopped
+    ports:
+      - target: 4005
+        published: 9002
+        protocol: tcp
+        mode: host
+        host_ip: "${TAILSCALE_IP}"   # dashboard reachable only over your tailnet
+      - target: 4005
+        published: 9002
+        protocol: tcp
+        mode: host
+        host_ip: "${DOCKER_NODE_IP}"        # enable node ip .40/24
+    volumes:
+      - databasus_data:/databasus-data
+    healthcheck:
+      test: ["CMD", "databasus", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"      # headroom for backup jobs — compression/encryption
+          memory: 512M     # spike CPU/RAM while a backup is actually running
+        reservations:
+          cpus: "0.1"
+          memory: 128M     # idle footprint the rest of the time
+      placement:
+        constraints:
+          - node.hostname == docker-dev-1
+    networks:
+      - dokploy-network   # so it can resolve prod-postgres by name
+
+volumes:
+  databasus_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/databasus-data
+
+networks:
+  dokploy-network:
+    external: true

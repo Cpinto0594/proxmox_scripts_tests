@@ -1,0 +1,44 @@
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - target: 9443
+        published: 9001
+        protocol: tcp
+        mode: host
+        host_ip: "${TAILSCALE_IP}"   # dashboard reachable only over your tailnet
+      - target: 9443
+        published: 9001
+        protocol: tcp
+        mode: host
+        host_ip: "${DOCKER_NODE_IP}"        # enable node ip .40/24
+      - target: 8000
+        published: 8000
+        protocol: tcp
+        mode: host
+        host_ip: "${TAILSCALE_IP}"   # dashboard reachable only over your tailnet
+      - target: 8000
+        published: 8000
+        protocol: tcp
+        mode: host
+        host_ip: "${DOCKER_NODE_IP}"        # enable node ip .40/24
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - dokploy-network
+networks:
+  dokploy-network:
+    external: true
+volumes:
+  portainer_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/portainer

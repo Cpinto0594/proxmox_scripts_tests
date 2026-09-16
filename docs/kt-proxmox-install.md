@@ -6,7 +6,7 @@ ssh-keygen -t ed25519 -C "cpinto@home.lab"  -f ~/.ssh/proxmox-vms
 
 ```
 
-### Add the public key to the server 
+### Add the public key to the server  ()
 ```bash
 ssh carlosp@192.168.1.100
 sudo apt install nano
@@ -197,3 +197,5 @@ sudo iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sud
 # if it's worker then run the join command
 
 ``
+
+

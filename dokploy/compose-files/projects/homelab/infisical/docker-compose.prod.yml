@@ -1,0 +1,62 @@
+
+services:
+  db:
+    image: postgres:14-alpine
+    container_name: infisical-db
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - infisical-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready --username=${POSTGRES_USER} && psql --username=${POSTGRES_USER} --list"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    networks:
+      - dokploy-network
+ 
+  redis:
+    image: redis:7-alpine
+    container_name: infisical-redis
+    restart: unless-stopped
+    env_file: .env
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+    volumes:
+      - infisical-redis-data:/data
+    networks:
+      - dokploy-network
+ 
+  backend:
+    image: infisical/infisical:v0.135.0-postgres
+    container_name: infisical-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file: .env
+    environment:
+      NODE_ENV: production
+    ports:
+      - "9003:8080"
+    networks:
+      - dokploy-network
+ 
+volumes:
+  infisical-pg-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/infisical/pg_data
+  infisical-redis-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/infisical/redis_data
+ 
+networks:
+  dokploy-network:
+    external: true
