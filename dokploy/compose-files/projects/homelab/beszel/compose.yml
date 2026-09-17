@@ -6,17 +6,31 @@ services:
     environment:
       APP_URL: https://beszel.homelab.capilabs.dev   # used for notification links and agent config generation
 
-    # Bound to loopback only: the local agent reaches it via 127.0.0.1,
-    # while external access still goes through Traefik on dokploy-network below.
-    ports:
-      - "127.0.0.1:8090:8090"
-
     volumes:
       - beszel_hub_data:/beszel_data
 
     networks:
       - dokploy-network
-    
+
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == docker-worker-1
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+        reservations:
+          memory: 128M
+          cpus: "0.1"
+
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.beszel-web.rule=Host(`beszel.homelab.capilabs.dev`)
+      - traefik.http.routers.beszel-web.entrypoints=web
+      - traefik.http.routers.beszel-web.service=beszel-web
+      - traefik.http.services.beszel-web.loadbalancer.server.port=8090
+
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8090/api/health"]
       interval: 30s
@@ -29,20 +43,77 @@ services:
     container_name: beszel-agent
     restart: unless-stopped
 
-    # Host networking is what lets the agent report the VM's *actual* network
-    # interface stats rather than its own container-internal veth counters.
-    network_mode: host
+    # Swarm doesn't support network_mode: host alongside deploy: (it gets silently
+    # ignored by `docker stack deploy`), so this runs on the overlay network instead.
+    # Trade-off: network-throughput stats reflect the container's own interface
+    # rather than the physical NIC. CPU/memory/disk/Docker stats are unaffected.
+    networks:
+      - dokploy-network
 
     volumes:
       - beszel_agent_data:/var/lib/beszel-agent
       - /var/run/docker.sock:/var/run/docker.sock:ro   # read-only: this is how it reads per-container stats
 
     environment:
-      HUB_URL: http://127.0.0.1:8090
+      HUB_URL: http://beszel-hub:8090
       # Fill these in AFTER the hub is up: log into the hub, click "Add System",
       # and it generates a fresh KEY (SSH public key) + TOKEN pair for you to paste here.
       KEY: ""
       TOKEN: ""
+
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == docker-worker-1
+      resources:
+        limits:
+          memory: 64M
+          cpus: "0.2"
+        reservations:
+          memory: 32M
+          cpus: "0.05"
+
+    depends_on:
+      - beszel-hub
+
+    healthcheck:
+      test: ["CMD", "/agent", "health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  beszel-agent-dev1:
+    image: henrygd/beszel-agent:0.19.0
+    container_name: beszel-agent-dev1
+    restart: unless-stopped
+
+    networks:
+      - dokploy-network
+
+    volumes:
+      - beszel_agent_data_dev1:/var/lib/beszel-agent
+      - /var/run/docker.sock:/var/run/docker.sock:ro   # read-only: this is how it reads per-container stats
+
+    environment:
+      HUB_URL: http://beszel-hub:8090
+      # Generate a SEPARATE KEY/TOKEN pair for this one via "Add System" in the hub —
+      # name it something like "docker-dev-1" so it's distinguishable in the dashboard
+      # from the worker-node agent. Each agent needs its own credentials.
+      KEY: ""
+      TOKEN: ""
+
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == docker-dev-1
+      resources:
+        limits:
+          memory: 64M
+          cpus: "0.2"
+        reservations:
+          memory: 32M
+          cpus: "0.05"
 
     depends_on:
       - beszel-hub
@@ -66,6 +137,12 @@ volumes:
       o: bind
       device: /mnt/docker-storage/beszel/hub_data
   beszel_agent_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/beszel/agent_data
+  beszel_agent_data_dev1:
     driver: local
     driver_opts:
       type: none
