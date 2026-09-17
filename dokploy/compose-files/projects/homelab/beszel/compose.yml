@@ -56,8 +56,8 @@ services:
       HUB_URL: http://beszel-hub:8090
       # Fill these in AFTER the hub is up: log into the hub, click "Add System",
       # and it generates a fresh KEY (SSH public key) + TOKEN pair for you to paste here.
-      KEY: ""
-      TOKEN: ""
+      KEY: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINcam8BsjksWvAYewez9Zg0crKo3GMeIo/pbxhKpFXgL"
+      TOKEN: "5cc7-fe2f4005b4-292bd-cba05ade8"
 
     deploy:
       placement:
@@ -98,8 +98,8 @@ services:
       # Generate a SEPARATE KEY/TOKEN pair for this one via "Add System" in the hub —
       # name it something like "docker-dev-1" so it's distinguishable in the dashboard
       # from the worker-node agent. Each agent needs its own credentials.
-      KEY: ""
-      TOKEN: ""
+      KEY: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINcam8BsjksWvAYewez9Zg0crKo3GMeIo/pbxhKpFXgL"
+      TOKEN: "5eaa-8f78ae2854-dc0e-96ee3fde88"
 
     deploy:
       placement:
