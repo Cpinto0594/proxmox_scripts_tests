@@ -1,0 +1,73 @@
+services:
+  beszel-hub:
+    image: henrygd/beszel:0.19.0
+    container_name: beszel-hub
+    restart: unless-stopped
+    environment:
+      APP_URL: https://beszel.homelab.capilabs.dev   # used for notification links and agent config generation
+
+    # Bound to loopback only: the local agent reaches it via 127.0.0.1,
+    # while external access still goes through Traefik on dokploy-network below.
+    ports:
+      - "127.0.0.1:8090:8090"
+
+    volumes:
+      - beszel_hub_data:/beszel_data
+
+    networks:
+      - dokploy-network
+    
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8090/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  beszel-agent:
+    image: henrygd/beszel-agent:0.19.0
+    container_name: beszel-agent
+    restart: unless-stopped
+
+    # Host networking is what lets the agent report the VM's *actual* network
+    # interface stats rather than its own container-internal veth counters.
+    network_mode: host
+
+    volumes:
+      - beszel_agent_data:/var/lib/beszel-agent
+      - /var/run/docker.sock:/var/run/docker.sock:ro   # read-only: this is how it reads per-container stats
+
+    environment:
+      HUB_URL: http://127.0.0.1:8090
+      # Fill these in AFTER the hub is up: log into the hub, click "Add System",
+      # and it generates a fresh KEY (SSH public key) + TOKEN pair for you to paste here.
+      KEY: ""
+      TOKEN: ""
+
+    depends_on:
+      - beszel-hub
+
+    healthcheck:
+      test: ["CMD", "/agent", "health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  dokploy-network:
+    external: true
+
+volumes:
+  beszel_hub_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/beszel/hub_data
+  beszel_agent_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/beszel/agent_data

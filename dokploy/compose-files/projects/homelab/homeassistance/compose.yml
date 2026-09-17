@@ -12,12 +12,6 @@ services:
         published: 9004
         protocol: tcp
         mode: host
-        host_ip: ${TAILSCALE_IP}
-      - target: 8123
-        published: 9004
-        protocol: tcp
-        mode: host
-        host_ip: ${DOCKER_NODE_IP}
     deploy:
       placement:
         constraints:
@@ -31,7 +25,14 @@ services:
           memory: 256M
       restart_policy:
         condition: on-failure
+    networks: 
+      - dokploy-network
 
+
+networks:
+  dokploy-network:
+    external: true
+    
 volumes:
   homeassistant-config:
     driver: local
