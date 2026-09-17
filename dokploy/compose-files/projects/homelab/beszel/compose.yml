@@ -31,13 +31,6 @@ services:
       - traefik.http.routers.beszel-hub.service=beszel-hub
       - traefik.http.services.beszel-hub.loadbalancer.server.port=8090
 
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8090/api/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
-
   beszel-agent:
     image: henrygd/beszel-agent:0.19.0
     container_name: beszel-agent
