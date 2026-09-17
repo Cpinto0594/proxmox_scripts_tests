@@ -29,12 +29,12 @@ services:
           memory: 128M
           cpus: "0.1"
 
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.beszel-hub.rule=Host(`beszel.homelab.capilabs.dev`)
-      - traefik.http.routers.beszel-hub.entrypoints=web
-      - traefik.http.routers.beszel-hub.service=beszel-hub
-      - traefik.http.services.beszel-hub.loadbalancer.server.port=8090
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.http.routers.beszel-hub.rule=Host(`beszel.homelab.capilabs.dev`)
+    #   - traefik.http.routers.beszel-hub.entrypoints=web
+    #   - traefik.http.routers.beszel-hub.service=beszel-hub
+    #   - traefik.http.services.beszel-hub.loadbalancer.server.port=8090
 
   beszel-agent:
     image: henrygd/beszel-agent:0.19.0
