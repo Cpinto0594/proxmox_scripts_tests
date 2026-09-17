@@ -12,6 +12,11 @@ services:
     networks:
       - dokploy-network
 
+    ports:
+      - target: 8090
+        published: 9005
+        mode: host
+
     deploy:
       placement:
         constraints:
