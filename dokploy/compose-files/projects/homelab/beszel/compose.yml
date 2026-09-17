@@ -26,10 +26,10 @@ services:
 
     labels:
       - traefik.enable=true
-      - traefik.http.routers.beszel-web.rule=Host(`beszel.homelab.capilabs.dev`)
-      - traefik.http.routers.beszel-web.entrypoints=web
-      - traefik.http.routers.beszel-web.service=beszel-web
-      - traefik.http.services.beszel-web.loadbalancer.server.port=8090
+      - traefik.http.routers.beszel-hub.rule=Host(`beszel.homelab.capilabs.dev`)
+      - traefik.http.routers.beszel-hub.entrypoints=web
+      - traefik.http.routers.beszel-hub.service=beszel-hub
+      - traefik.http.services.beszel-hub.loadbalancer.server.port=8090
 
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8090/api/health"]
