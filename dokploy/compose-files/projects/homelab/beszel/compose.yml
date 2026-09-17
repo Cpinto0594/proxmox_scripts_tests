@@ -13,6 +13,7 @@ services:
       - dokploy-network
 
     deploy:
+      endpoint_mode: dnsrr
       placement:
         constraints:
           - node.hostname == docker-worker-1
