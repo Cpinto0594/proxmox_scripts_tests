@@ -1,0 +1,37 @@
+services:
+  mailpit:
+    image: axllent/mailpit
+    container_name: mailpit
+    restart: unless-stopped
+    volumes:
+      - mailpit-data:/data
+    ports:
+      - 9005:8025
+      - 1025:1025
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_DATABASE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    networks:
+      - dokploy-network
+
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == docker-worker-1
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+        reservations:
+          memory: 128M
+          cpus: "0.1"
+
+volumes:
+  mailpit-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/mailpit
