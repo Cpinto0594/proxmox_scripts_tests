@@ -1,0 +1,71 @@
+
+services:
+  technitium-dns:
+    image: technitium/dns-server:latest
+    hostname: technitium-dns
+    # Container hostname becomes the DNS server's self-identity unless overridden below.
+    # If you leave DNS_SERVER_DOMAIN unset, Technitium falls back to the container ID as its
+    # domain name, which breaks after any redeploy — so it's set explicitly.
+    environment:
+      - DNS_SERVER_DOMAIN=dns.homelab.capilabs.dev   # change to whatever FQDN you want it to answer as
+      - DNS_SERVER_ADMIN_PASSWORD=${DNS_ADMIN_PASSWORD}  # only read on first-ever start (no config yet)
+      - DNS_SERVER_LOG_FOLDER_PATH=/var/log/technitium/dns
+      - DNS_SERVER_LOG_USING_LOCAL_TIME=true
+      - TZ=America/Bogota
+      - DNS_SERVER_FORWARDERS=1.1.1.1,8.8.8.8
+      - DNS_SERVER_FORWARDER_PROTOCOL=Udp
+      - DNS_SERVER_ENABLE_BLOCKING=true
+      - DNS_SERVER_RECURSION=AllowOnlyForPrivateNetworks
+      # - DNS_SERVER_BLOCK_LIST_URLS=
+
+    ports:
+      - target: 53
+        published: 53
+        protocol: udp
+        mode: host
+      - target: 53
+        published: 53
+        protocol: tcp
+        mode: host
+
+
+    volumes:
+      - technitium-config:/etc/dns
+      - technitium-logs:/var/log/technitium/dns
+
+    deploy:
+      # Pin to whichever Swarm node you want this on, e.g.:
+      # placement:
+      #   constraints:
+      #     - node.hostname == docker-worker-1
+      restart_policy:
+        condition: any
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.technitium.rule=Host(`technitium.homelab.capilabs.dev`)
+      - traefik.http.routers.technitium.entrypoints=web
+      - traefik.http.routers.technitium.service=technitium
+      #- traefik.http.routers.technitium.tls.certresolver=letsencrypt
+      - traefik.http.services.technitium.loadbalancer.server.port=5380
+      - traefik.docker.network=dokploy-network   # match whatever your Dokploy/Traefik overlay network is actually named
+
+    networks:
+      - dokploy-network
+        
+networks:
+  dokploy-network:
+    external: true
+
+volumes:
+  technitium-config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/technitium/config
+  technitium-logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/technitium/logs

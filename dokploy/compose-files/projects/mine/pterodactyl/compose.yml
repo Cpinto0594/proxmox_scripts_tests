@@ -1,0 +1,135 @@
+version: "3.8"
+
+# Pterodactyl PANEL only. Wings (the daemon that actually runs game server
+# containers) needs direct access to the Docker socket on its host and is
+# normally installed with the official install script on a dedicated node,
+# not deployed as a Dokploy Compose/Swarm app. Ask if you want a Wings
+# compose/install snippet too.
+
+services:
+  panel:
+    image: ghcr.io/pterodactyl/panel:latest
+    restart: unless-stopped
+    environment:
+      APP_URL: "https://pterodactyl.homelab.capilabs.dev"
+      APP_TIMEZONE: "America/Bogota"
+      APP_SERVICE_AUTHOR: "admin@capilabs.dev"
+      TRUSTED_PROXIES: "*"
+      APP_ENVIRONMENT_ONLY: "false"
+      CACHE_DRIVER: "redis"
+      SESSION_DRIVER: "redis"
+      QUEUE_DRIVER: "redis"
+      REDIS_HOST: pterodactyl-cache
+      REDIS_PORT: "6379"
+      DB_HOST: pterodactyl-db
+      DB_PORT: "3306"
+      DB_DATABASE: "panel"
+      DB_USERNAME: "pterodactyl"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      MAIL_DRIVER: "smtp"
+      MAIL_HOST: "${MAIL_HOST}"
+      MAIL_PORT: "${MAIL_PORT}"
+      MAIL_USERNAME: "${MAIL_USERNAME}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD}"
+      MAIL_ENCRYPTION: "true"
+      MAIL_FROM: "${MAIL_FROM}"
+    volumes:
+      - pterodactyl-var:/app/var/
+      - pterodactyl-nginx:/etc/nginx/http.d/
+      - pterodactyl-certs:/etc/letsencrypt/
+      - pterodactyl-logs:/app/storage/logs
+    networks:
+      - dokploy-network
+    depends_on:
+      - pterodactyl-db
+      - pterodactyl-cache
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == docker-worker-1
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.pterodactyl.service=pterodactyl
+      - traefik.http.routers.pterodactyl.rule=Host(`pterodactyl.homelab.capilabs.dev`)
+      - traefik.http.routers.pterodactyl.entrypoints=web
+      - traefik.http.services.pterodactyl.loadbalancer.server.port=80
+        # TLS is expected to be terminated by the Cloudflare Tunnel in front
+        # of dokploy-traefik (Pattern B) — no certresolver needed here.
+        # If you're setting the domain via the Dokploy UI instead, delete
+        # this whole `labels:` block and configure it there.
+
+  pterodactyl-db:
+    image: mariadb:11
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "panel"
+      MYSQL_USER: "pterodactyl"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+    volumes:
+      - pterodactyl-db-data:/var/lib/mysql
+    networks:
+      - dokploy-network
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == docker-worker-1
+
+  pterodactyl-cache:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - pterodactyl-cache-data:/data
+    networks:
+      - dokploy-network
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == docker-worker-1
+
+volumes:
+  pterodactyl-var:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/pterodactyl/var
+  pterodactyl-nginx:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/pterodactyl/nginx
+  pterodactyl-certs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/pterodactyl/certs
+  pterodactyl-logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/pterodactyl/logs
+  pterodactyl-db-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/pterodactyl/db
+  pterodactyl-cache-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/pterodactyl/cache
+
+networks:
+  dokploy-network:
+    external: true
+
+
+#docker exec -it (container_name) php artisan p:user:make
