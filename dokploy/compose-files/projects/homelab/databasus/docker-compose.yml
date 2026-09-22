@@ -35,6 +35,19 @@ services:
           - node.hostname == docker-dev-1
     networks:
       - dokploy-network   # so it can resolve prod-postgres by name
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.databasus-public.rule=Host(`${PUBLIC_DOMAIN}`)
+      - traefik.http.routers.databasus-public.entrypoints=web
+      - traefik.http.routers.databasus-public.service=databasus
+
+      - traefik.http.routers.databasus-local.rule=Host(`${LOCAL_DOMAIN}`)
+      - traefik.http.routers.databasus-local.entrypoints=websecure
+      - traefik.http.routers.databasus-local.tls.certresolver=cloudflare
+      - traefik.http.routers.databasus-local.service=databasus
+      
+      - traefik.docker.network=dokploy-network
+      - traefik.http.services.databasus.loadbalancer.server.port=4005
 
 volumes:
   databasus_data:

@@ -158,16 +158,21 @@ services:
         reservations:
           memory: 512M
       labels:
-        # NOTE: Traefik's Swarm provider reads labels from the service object,
-        # so these MUST live under deploy.labels, not top-level labels.
         - traefik.enable=true
-        - traefik.docker.network=dokploy-network
-        - traefik.http.routers.forgejo.rule=Host(`${FORGEJO_DOMAIN}`)
-        - traefik.http.routers.forgejo.entrypoints=websecure
-        - traefik.http.routers.forgejo.tls.certresolver=cloudflare
-        - traefik.http.routers.mi-app-secure.tls=true
-        - traefik.http.routers.forgejo.service=forgejo
+
+        # Public — reached via Cloudflare Tunnel, which already terminates TLS at the edge
+        - traefik.http.routers.forgejo-public.rule=Host(`${FORGEJO_PUBLIC_DOMAIN}`)
+        - traefik.http.routers.forgejo-public.entrypoints=web
+        - traefik.http.routers.forgejo-public.service=forgejo
+
+        # Local — reached directly via Technitium, terminates TLS itself using the new Cloudflare resolver
+        - traefik.http.routers.forgejo-local.rule=Host(`forgejo.home.capilabs.dev`)
+        - traefik.http.routers.forgejo-local.entrypoints=websecure
+        - traefik.http.routers.forgejo-local.tls.certresolver=cloudflare
+        - traefik.http.routers.forgejo-local.service=forgejo
+
         - traefik.http.services.forgejo.loadbalancer.server.port=3000
+        - traefik.docker.network=dokploy-network
 
 volumes:
   forgejo-db-data:

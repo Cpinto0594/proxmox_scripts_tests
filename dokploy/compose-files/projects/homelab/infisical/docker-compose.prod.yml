@@ -42,6 +42,22 @@ services:
       - "9003:8080"
     networks:
       - dokploy-network
+    labels:
+      - traefik.enable=true
+
+      # Public — reached via Cloudflare Tunnel, which already terminates TLS at the edge
+      - traefik.http.routers.infisical-public.rule=Host(`${PUBLIC_DOMAIN}`)
+      - traefik.http.routers.infisical-public.entrypoints=web
+      - traefik.http.routers.infisical-public.service=infisical
+
+      # Local — reached directly via Technitium, terminates TLS itself using the new Cloudflare resolver
+      - traefik.http.routers.infisical-local.rule=Host(`${LOCAL_DOMAIN}`)
+      - traefik.http.routers.infisical-local.entrypoints=websecure
+      - traefik.http.routers.infisical-local.tls.certresolver=cloudflare
+      - traefik.http.routers.infisical-local.service=infisical
+
+      - traefik.http.services.infisical.loadbalancer.server.port=8080
+      - traefik.docker.network=dokploy-network
  
 volumes:
   infisical-pg-data:
