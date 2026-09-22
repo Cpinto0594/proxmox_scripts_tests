@@ -42,12 +42,17 @@ services:
         condition: any
     labels:
       - traefik.enable=true
-      - traefik.http.routers.technitium.rule=Host(`technitium.homelab.capilabs.dev`)
-      - traefik.http.routers.technitium.entrypoints=web
-      - traefik.http.routers.technitium.service=technitium
-      #- traefik.http.routers.technitium.tls.certresolver=letsencrypt
+      - traefik.http.routers.technitium-public.rule=Host(`${PUBLIC_DOMAIN}`)
+      - traefik.http.routers.technitium-public.entrypoints=web
+      - traefik.http.routers.technitium-public.service=technitium
+
+      - traefik.http.routers.technitium-local.rule=Host(`${LOCAL_DOMAIN}`)
+      - traefik.http.routers.technitium-local.entrypoints=websecure
+      - traefik.http.routers.technitium-local.tls.certresolver=cloudflare
+      - traefik.http.routers.technitium-local.service=technitium
+
       - traefik.http.services.technitium.loadbalancer.server.port=5380
-      - traefik.docker.network=dokploy-network   # match whatever your Dokploy/Traefik overlay network is actually named
+      - traefik.docker.network=dokploy-network
 
     networks:
       - dokploy-network
