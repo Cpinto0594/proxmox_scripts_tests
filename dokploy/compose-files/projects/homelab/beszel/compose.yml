@@ -26,10 +26,17 @@ services:
           cpus: "0.1"
       labels:
         - traefik.enable=true
-        - traefik.http.routers.beszel-hub.rule=Host(`beszel.homelab.capilabs.dev`)
-        - traefik.http.routers.beszel-hub.entrypoints=web
-        - traefik.http.routers.beszel-hub.service=beszel-hub
+        - traefik.http.routers.beszel-public.rule=Host(`${PUBLIC_DOMAIN}`)
+        - traefik.http.routers.beszel-public.entrypoints=web
+        - traefik.http.routers.beszel-public.service=beszel-hub
+        
+        - traefik.http.routers.beszel-local.rule=Host(`${LOCAL_DOMAIN}`)
+        - traefik.http.routers.beszel-local.entrypoints=websecure
+        - traefik.http.routers.beszel-local.tls.certresolver=cloudflare
+        - traefik.http.routers.beszel-local.service=beszel-hub
+
         - traefik.http.services.beszel-hub.loadbalancer.server.port=8090
+        - traefik.docker.network=dokploy-network
 
   beszel-agent:
     image: henrygd/beszel-agent:0.19.0
