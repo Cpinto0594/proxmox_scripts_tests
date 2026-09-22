@@ -27,6 +27,19 @@ services:
         reservations:
           memory: 128M
           cpus: "0.1"
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.mailpit-public.rule=Host(`${PUBLIC_DOMAIN}`)
+        - traefik.http.routers.mailpit-public.entrypoints=web
+        - traefik.http.routers.mailpit-public.service=mailpit
+
+        - traefik.http.routers.mailpit-local.rule=Host(`${LOCAL_DOMAIN}`)
+        - traefik.http.routers.mailpit-local.entrypoints=websecure
+        - traefik.http.routers.mailpit-local.tls.certresolver=cloudflare
+        - traefik.http.routers.mailpit-local.service=mailpit
+        
+        - traefik.http.services.mailpit.loadbalancer.server.port=8025
+        - traefik.docker.network=dokploy-network
 
 volumes:
   mailpit-data:
