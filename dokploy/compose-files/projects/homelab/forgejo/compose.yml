@@ -163,7 +163,9 @@ services:
         - traefik.enable=true
         - traefik.docker.network=dokploy-network
         - traefik.http.routers.forgejo.rule=Host(`${FORGEJO_DOMAIN}`)
-        - traefik.http.routers.forgejo.entrypoints=web
+        - traefik.http.routers.forgejo.entrypoints=websecure
+        - traefik.http.routers.forgejo.tls.certresolver=cloudflare
+        - traefik.http.routers.mi-app-secure.tls=true
         - traefik.http.routers.forgejo.service=forgejo
         - traefik.http.services.forgejo.loadbalancer.server.port=3000
 
