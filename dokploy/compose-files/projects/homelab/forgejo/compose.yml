@@ -195,9 +195,6 @@ networks:
     external: true         # rename to your actual Dokploy/Traefik network
 
 
-
-
-
 # docker exec -u git -it homelab-forgejo-rgu8rl_forgejo.1.logjza1z0povor302vmf604sb \
 #  forgejo admin user create \
 #  --username carlosp --password 'c4rl0sP@ssw0rds' \
