@@ -7,7 +7,7 @@ services:
     # If you leave DNS_SERVER_DOMAIN unset, Technitium falls back to the container ID as its
     # domain name, which breaks after any redeploy — so it's set explicitly.
     environment:
-      - DNS_SERVER_DOMAIN=dns.homelab.capilabs.dev   # change to whatever FQDN you want it to answer as
+      - DNS_SERVER_DOMAIN=dns.home.capilabs.dev   # change to whatever FQDN you want it to answer as
       - DNS_SERVER_ADMIN_PASSWORD=${DNS_ADMIN_PASSWORD}  # only read on first-ever start (no config yet)
       - DNS_SERVER_LOG_FOLDER_PATH=/var/log/technitium/dns
       - DNS_SERVER_LOG_USING_LOCAL_TIME=true
