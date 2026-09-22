@@ -25,16 +25,27 @@ services:
     labels:
       - traefik.enable=true
       # Web UI
-      - traefik.http.routers.gitlab-web.rule=Host(`gitlab.homelab.capilabs.dev`)
-      - traefik.http.routers.gitlab-web.entrypoints=web
-      - traefik.http.routers.gitlab-web.service=gitlab-web
-      - traefik.http.services.gitlab-web.loadbalancer.server.port=80
+      - traefik.http.routers.gitlab-web-public.rule=Host(`${PUBLIC_DOMAIN}`)
+      - traefik.http.routers.gitlab-web-public.entrypoints=web
+      - traefik.http.routers.gitlab-web-public.service=gitlab-web
       # Container Registry
-      - traefik.http.routers.gitlab-registry.rule=Host(`registry.homelab.capilabs.dev`)
+      - traefik.http.routers.gitlab-registry.rule=Host(`${REGISTRY_DOMAIN}`)
       - traefik.http.routers.gitlab-registry.entrypoints=web
       - traefik.http.routers.gitlab-registry.service=gitlab-registry
       - traefik.http.services.gitlab-registry.loadbalancer.server.port=5050
 
+      - traefik.http.routers.gitlab-web-local.rule=Host(`${LOCAL_DOMAIN}`)
+      - traefik.http.routers.gitlab-web-local.entrypoints=websecure
+      - traefik.http.routers.gitlab-web-local.tls.certresolver=cloudflare
+      - traefik.http.routers.gitlab-web-local.service=gitlab-web
+      
+      - traefik.http.routers.gitlab-registry-local.rule=Host(`${LOCAL_REGISTRY_DOMAIN}`)
+      - traefik.http.routers.gitlab-registry-local.entrypoints=websecure
+      - traefik.http.routers.gitlab-registry-local.tls.certresolver=cloudflare
+      - traefik.http.routers.gitlab-registry-local.service=gitlab-registry
+
+      - traefik.docker.network=dokploy-network
+      - traefik.http.services.gitlab-web.loadbalancer.server.port=80
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/-/readiness?all=1"]
       interval: 60s
