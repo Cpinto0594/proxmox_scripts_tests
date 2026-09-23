@@ -21,6 +21,9 @@ services:
       placement:
         constraints:
           - node.hostname == docker-worker-1  
+    networks:
+      - forgejo-internal
+      - dokploy-network
 
 volumes:
   forgejo-runner1:
@@ -33,24 +36,6 @@ volumes:
 networks:
   forgejo-internal:
     driver: overlay
-    external: true        # DB/Redis never need to leave this stack
+    external: true       
   dokploy-network:
-    external: true         # rename to your actual Dokploy/Traefik network
-
-
-# docker exec -u git -it homelab-forgejo-rgu8rl_forgejo.1.logjza1z0povor302vmf604sb \
-#  forgejo admin user create \
-#  --username carlosp --password '' \
-#  --email cpinto0594@gmail.com --admin
-
-
-
-
-    # docker run --rm -it \
-    #    -v /mnt/docker-storage/forgejo-runner1/data:/data \
-    #    code.forgejo.org/forgejo/runner:12.9.0 \
-    #    forgejo-runner register --no-interactive \
-    #      --token  \
-    #      --name docker-runner1 \
-    #      --instance https://forgejo.home.capilabs.dev \
-    #      --labels docker:docker://node:20-bookworm,ubuntu-latest:docker://catthehacker/ubuntu:act-latest,self-hosted
+    external: true       
