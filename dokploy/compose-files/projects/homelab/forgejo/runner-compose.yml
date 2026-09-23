@@ -22,7 +22,6 @@ services:
         constraints:
           - node.hostname == docker-worker-1  
     networks:
-      - forgejo-internal
       - dokploy-network
 
 volumes:
@@ -34,8 +33,5 @@ volumes:
       device: /mnt/docker-storage/forgejo-runner1/data
 
 networks:
-  forgejo-internal:
-    driver: overlay
-    external: true       
   dokploy-network:
     external: true       
