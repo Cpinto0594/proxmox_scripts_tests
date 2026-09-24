@@ -214,13 +214,3 @@ networks:
 #  --email cpinto0594@gmail.com --admin
 
 
-
-
-    # docker run --rm -it \
-    #    -v /mnt/docker-storage/forgejo-runner1/data:/data \
-    #    code.forgejo.org/forgejo/runner:12.9.0 \
-    #    forgejo-runner register --no-interactive \
-    #      --token  \
-    #      --name docker-runner1 \
-    #      --instance https://forgejo.home.capilabs.dev \
-    #      --labels docker:docker://node:20-bookworm,ubuntu-latest:docker://catthehacker/ubuntu:act-latest,self-hosted

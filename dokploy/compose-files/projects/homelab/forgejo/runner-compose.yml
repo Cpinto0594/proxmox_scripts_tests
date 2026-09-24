@@ -9,7 +9,7 @@ services:
     user: "0:0" 
     image: code.forgejo.org/forgejo/runner:12.9.0   # check code.forgejo.org/forgejo/runner/releases for newer tags
     container_name: forgejo-runner
-    command: ["forgejo-runner", "daemon"]
+    command: ["forgejo-runner", "daemon", "--config", "/data/config.yaml"]
     restart: unless-stopped
     volumes:
       - forgejo-runner1:/data
@@ -35,3 +35,12 @@ volumes:
 networks:
   dokploy-network:
     external: true       
+
+  #   docker run --rm -it --user 0:0 \
+  # -v /mnt/docker-storage/forgejo-runner1/data:/data \
+  # code.forgejo.org/forgejo/runner:12.9.0 \
+  # forgejo-runner register --no-interactive \
+  #   --token  \
+  #   --name docker-runner1 \
+  #   --instance http://forgejo.homelab.capilabs.dev \
+  #   --labels docker:docker://node:20-bookworm,ubuntu-latest:docker://catthehacker/ubuntu:act-latest,self-hosted
