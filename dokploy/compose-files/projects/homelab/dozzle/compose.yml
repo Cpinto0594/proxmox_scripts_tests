@@ -50,6 +50,11 @@ services:
         - traefik.http.routers.dozzle-local.tls.certresolver=cloudflare
         - traefik.http.routers.dozzle-local.service=dozzle
 
+        # Sticky session config for load balancing (Traefik 2.x)
+        - traefik.http.services.dozzle.loadbalancer.sticky.cookie=true
+        - traefik.http.services.dozzle.loadbalancer.sticky.cookie.name=dozzle_lb
+        - traefik.http.services.dozzle.loadbalancer.sticky.cookie.httponly=true
+
         - traefik.http.services.dozzle.loadbalancer.server.port=8080
 
 volumes:
