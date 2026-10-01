@@ -55,7 +55,7 @@ network:
         - to: default
           via: 192.168.1.1
       nameservers:
-        addresses: [1.1.1.1, 8.8.8.8]
+        addresses: [192.168.10.2, 1.1.1.1]
 ```
 
 ```bash

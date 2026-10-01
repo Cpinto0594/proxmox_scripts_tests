@@ -1,0 +1,67 @@
+# Dozzle — real-time container log viewer
+# Target: Dokploy Compose app, Compose Type = **Docker Swarm** (set at creation, can't be changed later)
+# Runs in Swarm mode as a global service: one agent per node (docker-dev-1 + docker-worker-1),
+# instances peer over the overlay network so any replica shows logs from the whole cluster.
+
+services:
+  dozzle:
+    image: amir20/dozzle:latest   # pin a version tag once you've confirmed it works
+    environment:
+      DOZZLE_MODE: swarm
+      DOZZLE_HOSTNAME: homelab-swarm
+      DOZZLE_AUTH_PROVIDER: simple        # reads /data/users.yml
+      DOZZLE_AUTH_TTL: 48h                # session length
+      DOZZLE_NO_ANALYTICS: "true"
+      DOZZLE_ENABLE_ACTIONS: "false"      # set "true" to allow start/stop/restart from the UI
+      DOZZLE_LEVEL: info
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - dozzle-data:/data
+    networks:
+      - dozzle
+      - dokploy-network
+    healthcheck:
+      test: ["CMD", "/dozzle", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: 256M
+      labels:
+        # Swarm provider reads service labels -> must live under deploy.labels
+        - traefik.enable=true
+        - traefik.docker.network=dokploy-network
+
+        # Public: Cloudflare Tunnel -> Traefik (TLS terminated at Cloudflare)
+        - traefik.http.routers.dozzle-public.rule=Host(`${PUBLIC_DOMAIN}`)
+        - traefik.http.routers.dozzle-public.entrypoints=web
+        - traefik.http.routers.dozzle-public.service=dozzle
+
+        # Local: Technitium -> Traefik directly
+        - traefik.http.routers.dozzle-local.rule=Host(`${LOCAL_DOMAIN}`)
+        - traefik.http.routers.dozzle-local.entrypoints=websecure
+        - traefik.http.routers.dozzle-local.tls.certresolver=cloudflare
+        - traefik.http.routers.dozzle-local.service=dozzle
+
+        - traefik.http.services.dozzle.loadbalancer.server.port=8080
+
+volumes:
+  dozzle-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/dozzle   # must exist on EVERY node (global service)
+
+networks:
+  dozzle:
+    driver: overlay       # peer-to-peer agent traffic between nodes
+  dokploy-network:
+    external: true

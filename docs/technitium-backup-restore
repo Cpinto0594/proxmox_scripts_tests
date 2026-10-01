@@ -1,0 +1,9 @@
+TOKEN="XXXX"
+curl -s "https://technitium.homelab.capilabs.dev/api/settings/backup?token=$TOKEN&zones=true&allowedZones=true&blockedZones=true&dnsSettings=true&logSettings=true&authConfig=true&apps=true&scopes=true" \
+  -o technitium-backup.zip
+
+
+TOKEN="XXX"
+
+  curl -s --form file="@technitium-backup.zip" \
+  "http://192.168.10.2:5380/api/settings/restore?token=$TOKEN&zones=true&allowedZones=true&blockedZones=true&dnsSettings=true&logSettings=true&authConfig=true&apps=true&scopes=true&deleteExistingFiles=true" \
