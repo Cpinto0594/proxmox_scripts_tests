@@ -55,7 +55,7 @@ network:
         - to: default
           via: 192.168.1.1
       nameservers:
-        addresses: [192.168.10.2, 1.1.1.1]
+        addresses: [192.168.10.2]
 ```
 
 ```bash
@@ -150,7 +150,39 @@ kubectl get nodes --show-labels
 
 ```
 
+```bash
+ # RUN THIS TO UPDATE CLUSTER COREDNS TO 
+ ere are the commands. Run them from a machine with cluster access.
 
+1. Back up the current Corefile
+kubectl -n kube-system get cm coredns -o yaml > coredns-backup.yaml
+
+2. Edit it
+kubectl -n kube-system edit cm coredns
+Find this block:
+    forward . /etc/resolv.conf {
+       max_concurrent 1000
+    }
+Change it to:
+    forward . /etc/resolv.conf {
+       max_concurrent 1000
+       policy sequential
+    }
+Keep the indentation, because the Corefile is a YAML block scalar. Save and exit.
+
+3. Restart CoreDNS
+kubectl -n kube-system rollout restart deploy coredns
+kubectl -n kube-system rollout status deploy coredns
+The reload plugin is already in your Corefile and would pick up the change by itself within a minute or two. The restart makes it immediate.
+
+4. Verify
+kubectl run -it --rm dnscheck --image=busybox:1.36 --restart=Never -- nslookup forgejo.home.capilabs.dev
+It should now return 192.168.40.10. If it still returns 104.21.11.163 or 172.67.166.108, wait 30 seconds for the cache and run it again.
+
+Rollback, if something breaks
+kubectl apply -f coredns-backup.yaml
+kubectl -n kube-system rollout restart deploy coredns
+```
 
 # WORKERS
 ### Now go to the worker node and apply same commands and stop in command  **** (sudo kubeadm init) ****
