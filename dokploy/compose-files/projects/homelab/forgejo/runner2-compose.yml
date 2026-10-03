@@ -40,7 +40,7 @@ networks:
   # -v /mnt/docker-storage/forgejo-runner2/data:/data \
   # code.forgejo.org/forgejo/runner:12.9.0 \
   # forgejo-runner register --no-interactive \
-  #   --token FAmy2Sn7U3d2n5E2x4hIgE1mOEwU9AJFmcS2ZC7B \
+  #   --token  \
   #   --name docker-runner2 \
   #   --instance http://forgejo.homelab.capilabs.dev \
   #   --labels docker:docker://node:20-bookworm,ubuntu-latest:docker://catthehacker/ubuntu:act-latest,self-hosted
