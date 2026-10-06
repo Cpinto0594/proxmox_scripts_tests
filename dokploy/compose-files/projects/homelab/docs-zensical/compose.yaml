@@ -1,0 +1,30 @@
+# Dokploy app type: Docker Compose (NOT Swarm) — `docker stack deploy` can't run `build:`.
+# Source: this repo from Forgejo. Enable autodeploy so every push rebuilds the site.
+services:
+  docs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: homelab-docs:latest
+    restart: unless-stopped
+    networks:
+      - dokploy-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      # Local only: Technitium -> Traefik, reachable on LAN and over Tailscale.
+      # Deliberately no public router — these docs contain topology and internal IPs.
+      - traefik.http.routers.docs-local.rule=Host(`docs.home.capilabs.dev`)
+      - traefik.http.routers.docs-local.entrypoints=websecure
+      - traefik.http.routers.docs-local.tls.certresolver=cloudflare
+      - traefik.http.routers.docs-local.service=docs
+      - traefik.http.services.docs.loadbalancer.server.port=8080
+
+networks:
+  dokploy-network:
+    external: true

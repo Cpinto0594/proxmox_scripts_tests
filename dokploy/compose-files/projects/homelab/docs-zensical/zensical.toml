@@ -1,0 +1,59 @@
+[project]
+site_name = "capilabs homelab"
+site_description = "Proxmox, Kubernetes, Dokploy/Swarm, NAS and network documentation"
+docs_dir = "docs"
+site_dir = "site"
+
+nav = [
+  { "Home" = "README.md" },
+  { "Inventory" = [
+    { "Hardware" = "inventory/hardware.md" },
+    { "IP plan" = "inventory/ip-plan.md" },
+  ] },
+  { "Network" = "network/README.md" },
+  { "Platforms" = [
+    { "Proxmox" = "platforms/proxmox.md" },
+    { "Kubernetes" = "platforms/kubernetes.md" },
+    { "Dokploy / Swarm" = "platforms/dokploy-swarm.md" },
+  ] },
+  { "Services" = "services/README.md" },
+  { "Runbooks" = [
+    "runbooks/README.md",
+    { "Rejoin Swarm worker" = "runbooks/rejoin-swarm-worker.md" },
+    { "Postgres password mismatch" = "runbooks/postgres-password-mismatch.md" },
+    { "Extend LVM root" = "runbooks/extend-lvm-root.md" },
+    { "Migrate host to USB NIC" = "runbooks/migrate-host-to-usb-nic.md" },
+  ] },
+  { "Decisions" = [
+    "decisions/README.md",
+    { "0001 MikroTik switch" = "decisions/0001-mikrotik-switch.md" },
+    { "0002 Forgejo over GitLab" = "decisions/0002-forgejo-over-gitlab.md" },
+    { "0003 UGOS over TrueNAS" = "decisions/0003-ugos-over-truenas.md" },
+    { "0004 DBs in Dokploy, HA on VMs" = "decisions/0004-single-instance-dbs-in-dokploy.md" },
+    { "0005 Tunnel + Tailscale" = "decisions/0005-exposure-tunnel-plus-tailscale.md" },
+    { "0006 Named bind volumes" = "decisions/0006-named-bind-volumes.md" },
+    { "0007 DNS on dedicated LXC" = "decisions/0007-dns-on-dedicated-lxc.md" },
+    { "0008 Wings outside Swarm" = "decisions/0008-wings-outside-swarm.md" },
+  ] },
+  { "Gotchas" = "gotchas.md" },
+  { "Open items" = "open-items.md" },
+]
+
+[project.theme]
+features = [
+  "navigation.sections",
+  "navigation.top",
+  "search.highlight",
+  "content.code.copy",
+]
+
+[project.markdown_extensions.admonition]
+[project.markdown_extensions.tables]
+[project.markdown_extensions.toc]
+permalink = true
+
+# Mermaid diagrams (topology in README, flowcharts in platforms/)
+[project.markdown_extensions.pymdownx.superfences]
+custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]
