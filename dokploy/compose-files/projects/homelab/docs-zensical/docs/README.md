@@ -17,7 +17,7 @@ flowchart TB
         direction TB
         subgraph v1[VLAN 1 · 192.168.1.0/24 · mgmt]
             pve1[pvenode1<br/>OptiPlex Micro 7010<br/>.1.91]
-            pve2[master1<br/>HP Pro Mini 400 G9<br/>.1.90]
+            pve2[pvemaster1<br/>HP Pro Mini 400 G9<br/>.1.90]
         end
         subgraph v10[VLAN 10 · 192.168.10.0/24]
             dns[Technitium DNS<br/>.10.2]
@@ -50,8 +50,6 @@ flowchart TB
 | [platforms/kubernetes.md](platforms/kubernetes.md) | kubeadm cluster, MetalLB, ingress, Headlamp |
 | [platforms/dokploy-swarm.md](platforms/dokploy-swarm.md) | Swarm nodes + **compose conventions** |
 | [services/](services/README.md) | Service catalog |
-| [runbooks/](runbooks/README.md) | Step-by-step fixes and procedures |
-| [decisions/](decisions/README.md) | Why things are the way they are (ADRs) |
 | [gotchas.md](gotchas.md) | Hard-won lessons — read before debugging |
 | [open-items.md](open-items.md) | Unresolved problems and planned work |
 

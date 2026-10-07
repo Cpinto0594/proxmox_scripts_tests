@@ -14,11 +14,11 @@ Hard-won lessons. Check here before debugging.
 
 ## Postgres
 
-- **`POSTGRES_PASSWORD(_FILE)` only applies at `initdb`.** Reinstall + new secret + old volume = auth failure. See [runbook](runbooks/postgres-password-mismatch.md).
+- **`POSTGRES_PASSWORD(_FILE)` only applies at `initdb`.** Reinstall + new secret + old volume = auth failure.
 
 ## VMs / disks
 
-- **Ubuntu installer under-allocates LVM root.** Check `lsblk` after provisioning any VM. See [runbook](runbooks/extend-lvm-root.md).
+- **Ubuntu installer under-allocates LVM root.** Check `lsblk` after provisioning any VM.
 
 ## Kubernetes
 
@@ -31,5 +31,5 @@ Hard-won lessons. Check here before debugging.
 - **QDevice needs Tailscale on the host OS**, not in a VM.
 - **`exportfs` fails on unresolvable hostnames** — use IPs or `/etc/hosts`.
 - **OptiPlex onboard NIC is 1G only**; USB RTL8156 adapters do a real 2.35 Gbit/s.
-- **Client-side VPN can hijack LAN traffic.** TrueNAS UI "unreachable" was a VPN on the laptop. Check this first.
+- **Client-side VPN can hijack LAN traffic.** A NAS web UI that looked "unreachable" was actually a VPN on the laptop intercepting the traffic. Check this first.
 - **HDMI switch EDID** breaks the OptiPlex console — use an EDID emulator.

@@ -3,7 +3,7 @@
 ## Layout
 
 - **Core:** MikroTik CRS310-8G+2S+IN does switching, VLANs, and inter-VLAN routing. VLAN plan in [ip-plan.md](../inventory/ip-plan.md).
-- **Proxmox hosts:** each node's USB 2.5G adapter backs `vmbr1`, a VLAN-aware bridge trunking VLANs 10/20/30/40. Management IP and per-VLAN host IPs live on `vmbr1`. `vmbr0`/`nic0` stay configured with no IP as a fallback.
+- **Proxmox hosts:** each node's USB 2.5G adapter ([write-up](usb-2.5g-adapters.md)) backs `vmbr1`, a VLAN-aware bridge trunking VLANs 10/20/30/40. Management IP and per-VLAN host IPs live on `vmbr1`. `vmbr0`/`nic0` stay configured with no IP as a fallback.
 - TODO: export and commit the MikroTik config (`/export hide-sensitive file=mikrotik`) to a `network/mikrotik.rsc`.
 
 ## External exposure
@@ -19,23 +19,35 @@ flowchart LR
 - **Pattern B:** Cloudflare Tunnel → Dokploy Traefik → container.
 - Public services live under `*.homelab.capilabs.dev` (dedicated subdomain — no more flattening for wildcard SSL).
 - Local-only access under `*.home.capilabs.dev`, resolved by Technitium to Traefik directly, TLS via Traefik's `cloudflare` certresolver (DNS challenge). See the label pattern in [dokploy-swarm.md](../platforms/dokploy-swarm.md#traefik-labels).
-- Options evaluated for exposure: WireGuard, Tailscale, Headscale, Cloudflare Tunnel → [ADR-0005](../decisions/0005-exposure-tunnel-plus-tailscale.md).
+- Options evaluated for exposure: WireGuard, Tailscale, Headscale, Cloudflare Tunnel.
 
 ## Tailscale
 
-Installed directly on (not in containers):
+Installed directly on the host OS (not in containers) on every infrastructure node. IPs and subnet routes are in [ip-plan.md](../inventory/ip-plan.md#tailscale).
 
-- Proxmox hosts — needed so corosync-qdevice can reach the EC2 QDevice.
-- `docker-dev-1` (`100.64.122.124`) — no `ufw` on this host.
-- `docker-worker-1`.
-- EC2 QDevice (`100.109.27.36`).
+- **Proxmox hosts** (`pvemaster1`, `pvenode1`) — required so corosync-qdevice can reach the EC2 QDevice.
+- **Swarm nodes** (`docker-dev-1`, `docker-worker-1`) — admin access. No `ufw` on `docker-dev-1`.
+- **EC2 QDevice** — cluster quorum; the link is a direct connection, not via a DERP relay.
 
-Subnet route `192.168.1.0/24` advertised and approved. Known issue: Headlamp unreachable from mobile data over Tailscale — see [open-items](../open-items.md).
+### Remote access
+
+How Docker apps and Kubernetes are reached from outside the house:
+
+| What | Path |
+|---|---|
+| Public apps (`*.homelab.capilabs.dev`) | Cloudflare Tunnel — no Tailscale needed |
+| Local apps (`*.home.capilabs.dev`) | Tailscale split DNS → Technitium (`192.168.10.2`) → subnet route to Traefik on VLAN 40 |
+| Kubernetes (Headlamp, ingress, `kubectl`) | Subnet route to VLAN 30 (MetalLB `192.168.30.210–250`, API `192.168.30.10:6443`) |
+| Proxmox / Docker hosts (SSH, UIs) | Directly on their Tailscale IPs |
+
+- **Subnet routers:** `pvemaster1` and `pvenode1`, both advertising VLANs 10, 30, 40, with IP forwarding enabled.
+- **Split DNS:** Tailscale admin console → DNS → custom nameserver `192.168.10.2`, restricted to `home.capilabs.dev`.
+- VLANs 1 and 20 are deliberately not advertised.
 
 ## DNS
 
 - Technitium DNS Server at `192.168.10.2`.
-- Being migrated from Docker Compose on `docker-dev-1` to a dedicated Proxmox LXC running natively, so DNS doesn't depend on the Swarm stack ([ADR-0007](../decisions/0007-dns-on-dedicated-lxc.md)).
+- Runs natively in LXC 108 on `pvemaster1` (moved off Docker Compose on `docker-dev-1`), so DNS doesn't depend on the Swarm stack.
 - TODO: list zones, conditional forwarders, upstream resolvers, and DHCP DNS settings.
 
 ## NFS
