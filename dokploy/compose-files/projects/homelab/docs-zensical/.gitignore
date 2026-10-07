@@ -3,3 +3,5 @@
 secrets/
 *.key
 *.pem
+.cache/
+site/
