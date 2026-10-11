@@ -1,0 +1,41 @@
+services:
+  termix:
+    image: ghcr.io/termix-ssh/termix:latest
+    environment:
+      PORT: "8080"
+    volumes:
+      - termix-data:/app/data
+    networks:
+      - dokploy-network
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == docker-worker-1
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=dokploy-network
+        - traefik.http.services.termix.loadbalancer.server.port=8080
+
+        # LAN / Tailscale via Technitium
+        - traefik.http.routers.termix-local.rule=Host(`${LOCAL_DOMAIN}`)
+        - traefik.http.routers.termix-local.entrypoints=websecure
+        - traefik.http.routers.termix-local.tls.certresolver=cloudflare
+        - traefik.http.routers.termix-local.service=termix
+
+        # Public via Cloudflare Tunnel — enable only after TOTP/OIDC (or Cloudflare Access) is on
+        # - traefik.http.routers.termix-public.rule=Host(`${PUBLIC_DOMAIN}`)
+        # - traefik.http.routers.termix-public.entrypoints=web
+        # - traefik.http.routers.termix-public.service=termix
+
+volumes:
+  termix-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/termix
+
+networks:
+  dokploy-network:
+    external: true
