@@ -23,7 +23,7 @@ nav = [
   { "Gotchas" = "gotchas.md" },
   { "Open items" = "open-items.md" },
   { "Issues" = [
-    { CPU Power Management: issues/proxmox/cpu-power-management.md },
+    { "CPU Power Management" = "issues/proxmox/cpu-power-management.md" },
   ] },
 ]
 
