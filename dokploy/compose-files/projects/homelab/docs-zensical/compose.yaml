@@ -19,7 +19,7 @@ services:
       - traefik.docker.network=dokploy-network
       # Local only: Technitium -> Traefik, reachable on LAN and over Tailscale.
       # Deliberately no public router — these docs contain topology and internal IPs.
-      - traefik.http.routers.docs-local.rule=Host(`docs.home.capilabs.dev`)
+      - traefik.http.routers.docs-local.rule=Host(`${LOCAL_DOMAIN}`)
       - traefik.http.routers.docs-local.entrypoints=websecure
       - traefik.http.routers.docs-local.tls.certresolver=cloudflare
       - traefik.http.routers.docs-local.service=docs
