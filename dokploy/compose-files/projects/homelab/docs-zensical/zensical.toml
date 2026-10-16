@@ -22,6 +22,9 @@ nav = [
   { "Services" = "services/README.md" },
   { "Gotchas" = "gotchas.md" },
   { "Open items" = "open-items.md" },
+  { "Issues" = [
+    { CPU Power Management: issues/proxmox/cpu-power-management.md },
+  ] },
 ]
 
 [project.theme]
