@@ -65,7 +65,10 @@ networks:
   # docker run --rm -it --user 0:0 -v /mnt/docker-storage/forgejo-runner2/data:/data \
   # code.forgejo.org/forgejo/runner:12.9.0 \
   # forgejo-runner register --no-interactive \
-  #   --token  \
+  #   --token \
   #   --name docker-runner2 \
-  #   --instance http://forgejo.home.capilabs.dev \
+  #   --instance https://forgejo.home.capilabs.dev \
   #   --labels docker:docker://node:20-bookworm,ubuntu-latest:docker://catthehacker/ubuntu:act-latest,self-hosted
+
+  # docker run --rm code.forgejo.org/forgejo/runner:12.9.0 \
+  # forgejo-runner generate-config > /mnt/docker-storage/forgejo-runner2/data/config.yaml
