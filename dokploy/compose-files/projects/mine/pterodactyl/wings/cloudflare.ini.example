@@ -1,0 +1,10 @@
+# Copy this file to `cloudflare.ini` (same directory as wings-compose.yml)
+# and fill in a Cloudflare API token scoped to Zone:DNS:Edit on the
+# capilabs.dev zone only — not your Global API Key.
+#
+# Create one at: https://dash.cloudflare.com/profile/api-tokens
+#
+# After creating cloudflare.ini, lock it down:
+#   chmod 600 cloudflare.ini
+
+dns_cloudflare_api_token = YOUR_SCOPED_API_TOKEN_HERE

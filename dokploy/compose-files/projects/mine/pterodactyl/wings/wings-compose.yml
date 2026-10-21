@@ -1,0 +1,69 @@
+version: "3.8"
+
+# Wings for node `wings.home.capilabs.dev`, on a dedicated VM on pvemaster1 —
+# kept off docker-worker-1/docker-dev-1 for isolation from the other apps.
+#
+# Networking follows Pterodactyl's current official example (not the older
+# `network_mode: host` + `privileged: true` pattern some guides still show):
+# Wings itself only needs its own API (8080) and SFTP (2022) ports, on its
+# own bridge network. Each game-server container it spins up gets its own
+# port mappings directly via the Docker socket when Wings creates it — no
+# host networking needed for that.
+#
+# The `certbot` service issues and renews a real cert for
+# wings.home.capilabs.dev via Cloudflare's DNS-01 challenge (same mechanism
+# as the "cloudflare" certresolver already used in Traefik) — needed because
+# this hostname is LAN-only, so Let's Encrypt's normal HTTP-01 challenge has
+# no way to reach it from the internet.
+
+services:
+  wings:
+    build:
+      context: .
+      dockerfile: Dockerfile.wings
+      args:
+        WINGS_VERSION: v1.13.3
+    image: wings:v1.13.3
+    restart: unless-stopped
+    tty: true
+    networks:
+      - wings0
+    ports:
+      - "8080:8080"
+      - "2022:2022"
+    environment:
+      TZ: "America/Bogota"
+      WINGS_UID: 988
+      WINGS_GID: 988
+      WINGS_USERNAME: pterodactyl
+    depends_on:
+      - certbot
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers/:/var/lib/docker/containers/
+      - /etc/pterodactyl:/etc/pterodactyl
+      - /var/lib/pterodactyl:/var/lib/pterodactyl
+      - /var/log/pterodactyl:/var/log/pterodactyl
+      - /tmp/pterodactyl:/tmp/pterodactyl
+      - /run/wings:/run/wings
+      - /etc/ssl/certs:/etc/ssl/certs:ro
+      - /etc/letsencrypt:/etc/letsencrypt
+
+  certbot:
+    image: certbot/dns-cloudflare:latest
+    restart: unless-stopped
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - ./cloudflare.ini:/etc/cloudflare.ini:ro
+      - ./certbot-entrypoint.sh:/certbot-entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/certbot-entrypoint.sh"]
+
+networks:
+  wings0:
+    name: wings0
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "172.21.0.0/16"
+    driver_opts:
+      com.docker.network.bridge.name: wings0

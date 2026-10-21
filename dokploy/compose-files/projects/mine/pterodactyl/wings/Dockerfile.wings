@@ -1,0 +1,38 @@
+# Builds a Pterodactyl Wings image from source.
+# Pin WINGS_VERSION to a released tag: https://github.com/pterodactyl/wings/releases
+# Build with:
+#   docker build -f Dockerfile.wings --build-arg WINGS_VERSION=v1.13.3 -t wings:v1.13.3 .
+
+ARG WINGS_VERSION=v1.13.3
+
+# ---- Stage 1: compile the Go binary ----
+FROM golang:1.24-alpine AS builder
+ARG WINGS_VERSION
+
+RUN apk add --no-cache git make ca-certificates
+
+WORKDIR /src
+RUN git clone --depth 1 --branch "${WINGS_VERSION}" https://github.com/pterodactyl/wings.git .
+
+RUN go mod download
+
+RUN CGO_ENABLED=0 go build \
+      -ldflags "-s -w -X github.com/pterodactyl/wings/system.Version=${WINGS_VERSION}" \
+      -trimpath \
+      -o /out/wings \
+      wings.go
+
+# ---- Stage 2: minimal runtime ----
+# Alpine rather than a scratch/distroless base, so `docker exec -it <container> sh`
+# still works for troubleshooting — Wings itself is a static binary either way.
+FROM alpine:3.20
+
+RUN apk add --no-cache ca-certificates tzdata
+
+COPY --from=builder /out/wings /usr/bin/wings
+
+RUN mkdir -p /etc/pterodactyl /var/lib/pterodactyl /var/log/pterodactyl /tmp/pterodactyl
+
+EXPOSE 8080 2022
+ENTRYPOINT ["/usr/bin/wings"]
+CMD ["--config", "/etc/pterodactyl/config.yml"]
