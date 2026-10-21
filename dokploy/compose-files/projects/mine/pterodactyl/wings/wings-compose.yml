@@ -60,8 +60,8 @@ services:
     networks:
       - wings0
     environment:
-      - DOMAIN: gameserver-node01.home.capilabs.dev #change for server node domain
-      - CERTBOT_EMAIL: cpinto0594@gmail.com
+      DOMAIN: gameserver-node01.home.capilabs.dev #change for server node domain
+      CERTBOT_EMAIL: cpinto0594@gmail.com
 
 networks:
   wings0:
