@@ -57,6 +57,8 @@ services:
       - ./cloudflare.ini:/etc/cloudflare.ini:ro
       - ./certbot-entrypoint.sh:/certbot-entrypoint.sh:ro
     entrypoint: ["/bin/sh", "/certbot-entrypoint.sh"]
+    networks:
+      - wings0
 
 networks:
   wings0:

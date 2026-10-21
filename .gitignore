@@ -17,3 +17,4 @@ crash.*.log
 
 **/services-data
 docs/cloudflare_cert
+**/cloudflare.ini
