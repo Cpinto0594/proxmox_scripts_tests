@@ -49,11 +49,18 @@ services:
           - node.hostname == docker-worker-1
     labels:
       - traefik.enable=true
-      - traefik.docker.network=dokploy-network
-      - traefik.http.routers.pterodactyl.service=pterodactyl
-      - traefik.http.routers.pterodactyl.rule=Host(`pterodactyl.homelab.capilabs.dev`)
-      - traefik.http.routers.pterodactyl.entrypoints=web
       - traefik.http.services.pterodactyl.loadbalancer.server.port=80
+      - traefik.docker.network=dokploy-network
+
+      - traefik.http.routers.pterodactyl-public.service=pterodactyl
+      - traefik.http.routers.pterodactyl-public.rule=Host(`${PUBLIC_DOMAIN}`)
+      - traefik.http.routers.pterodactyl-public.entrypoints=web
+
+      - traefik.http.routers.pterodactyl-https.service=pterodactyl
+      - traefik.http.routers.pterodactyl-https.rule=Host(`${LOCAL_DOMAIN}`)
+      - traefik.http.routers.pterodactyl-https.entrypoints=websecure
+      - traefik.http.routers.pterodactyl-https.tls.certresolver=cloudflare
+
         # TLS is expected to be terminated by the Cloudflare Tunnel in front
         # of dokploy-traefik (Pattern B) — no certresolver needed here.
         # If you're setting the domain via the Dokploy UI instead, delete
@@ -133,3 +140,5 @@ networks:
 
 
 #docker exec -it (container_name) php artisan p:user:make
+
+#docker-compose run --rm panel php artisan p:user:make
