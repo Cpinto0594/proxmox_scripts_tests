@@ -10,6 +10,11 @@ echo Creating folder "~/server-data/games/wings"
 sudo mkdir -p ~/server-data/games/wings
 cd ~/server-data/games/wings
 
+sudo rm -r ./**
+sudo rm  /etc/pterodactyl/config.yml
+sudo rm -r /etc/letsencrypt/*
+
+
 git clone --filter=blob:none --no-checkout git@github.com:Cpinto0594/proxmox_scripts_tests.git
 cd proxmox_scripts_tests
 git sparse-checkout init --no-cone
