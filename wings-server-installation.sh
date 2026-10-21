@@ -1,4 +1,7 @@
+
 ##Ensure folder
+
+#sudo rm -r ./**
 echo Creating folder "~/server-data/games/wings"
 sudo mkdir -p ~/server-data/games/wings
 cd ~/server-data/games/wings

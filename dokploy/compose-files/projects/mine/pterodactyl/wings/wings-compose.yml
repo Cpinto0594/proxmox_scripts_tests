@@ -36,8 +36,6 @@ services:
       WINGS_UID: 988
       WINGS_GID: 988
       WINGS_USERNAME: pterodactyl
-      DOMAIN: gameserver-node01.home.capilabs.dev #change for server node domain
-      CERTBOT_EMAIL: cpinto0594@gmail.com
     depends_on:
       - certbot
     volumes:
@@ -61,6 +59,9 @@ services:
     entrypoint: ["/bin/sh", "/certbot-entrypoint.sh"]
     networks:
       - wings0
+    environment:
+      - DOMAIN: gameserver-node01.home.capilabs.dev #change for server node domain
+      - CERTBOT_EMAIL: cpinto0594@gmail.com
 
 networks:
   wings0:
