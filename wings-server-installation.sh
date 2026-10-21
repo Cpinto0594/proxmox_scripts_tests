@@ -2,6 +2,10 @@
 ##Ensure folder
 
 #sudo rm -r ./**
+#sudo rm  /etc/pterodactyl/config.yml
+ #sudo rm -r /etc/letsencrypt/*
+
+
 echo Creating folder "~/server-data/games/wings"
 sudo mkdir -p ~/server-data/games/wings
 cd ~/server-data/games/wings
