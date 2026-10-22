@@ -18,6 +18,10 @@ nav = [
     { "Proxmox" = "platforms/proxmox.md" },
     { "Kubernetes" = "platforms/kubernetes.md" },
     { "Dokploy / Swarm" = "platforms/dokploy-swarm.md" },
+    { "Database Clusters" = [
+      {"PG Patroni Cluster" = "services/patroni-cluster-guide.md"}
+      ] 
+    },
   ] },
   { "Services" = "services/README.md" },
   { "Gotchas" = "gotchas.md" },
