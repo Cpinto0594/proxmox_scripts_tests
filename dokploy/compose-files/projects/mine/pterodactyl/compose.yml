@@ -11,7 +11,7 @@ services:
     image: ghcr.io/pterodactyl/panel:latest
     restart: unless-stopped
     environment:
-      APP_URL: "https://pterodactyl.homelab.capilabs.dev"
+      APP_URL: "https://pterodactyl.home.capilabs.dev"
       APP_TIMEZONE: "America/Bogota"
       APP_SERVICE_AUTHOR: "admin@capilabs.dev"
       TRUSTED_PROXIES: "*"
@@ -61,10 +61,6 @@ services:
       - traefik.http.routers.pterodactyl-https.entrypoints=websecure
       - traefik.http.routers.pterodactyl-https.tls.certresolver=cloudflare
 
-        # TLS is expected to be terminated by the Cloudflare Tunnel in front
-        # of dokploy-traefik (Pattern B) — no certresolver needed here.
-        # If you're setting the domain via the Dokploy UI instead, delete
-        # this whole `labels:` block and configure it there.
 
   pterodactyl-db:
     image: mariadb:11
