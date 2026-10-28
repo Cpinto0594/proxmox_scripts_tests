@@ -21,7 +21,7 @@ nginx['proxy_set_headers'] = {
 # --- Git over SSH ---
 gitlab_rails['gitlab_shell_ssh_port'] = 2222
 
-# --- Resource tuning: this host also runs Frigate, Postgres, Infisical, etc. ---
+# --- Resource tuning: this host also runs Postgres, Infisical, etc. ---
 # Defaults assume a dedicated box with 8GB+ free; these cut GitLab's footprint
 # down to something reasonable to coexist with your other services.
 puma['worker_processes'] = 2

@@ -4,14 +4,14 @@
 
 | Node | Proxmox VM | Host | vCPU / RAM / Disk | IP (VLAN 40) | Tailscale | Swarm role |
 |---|---|---|---|---|---|---|
-| `docker-dev-1` | 104 (`docker`) | `pvemaster1` | 6 / 12 GB / 150 GB | 192.168.40.10 | 100.64.122.124 | Manager, runs Dokploy |
-| `docker-worker-1` | 107 (`docker.worker.1`) | `pvenode1` | 6 / 8 GB / 100 GB | 192.168.40.11 | 100.69.115.109 | Worker |
+| `docker-dev-1` | 104 (`docker.dev.1`) | `pvemaster1` | 6 / 8 GB / 150 GB | 192.168.40.10 | 100.64.122.124 | Manager, runs Dokploy |
+| `docker-worker-1` | 107 (`docker.worker.1`) | `pvenode1` | 6 / 6 GB / 100 GB | 192.168.40.11 | 100.69.115.109 | Worker |
 
 - One node per Proxmox host, so losing a host leaves the other Swarm node running.
 - Only one manager: if `docker-dev-1` is down, running services on the worker keep going, but nothing can be deployed or rescheduled until it's back.
 - Disks are LVM (`ubuntu-vg/ubuntu-lv`). `docker-dev-1` was under-allocated at install (root LV 24 GB) — check every new node with `lsblk`.
 - No `ufw` on `docker-dev-1`. Nothing is exposed directly; public traffic arrives via Cloudflare Tunnel, private via Tailscale.
-- New nodes are cloned from template VM 109 (`docker-template-ubuntu-server-24.04.4`) — set the NIC's VLAN tag to 40 after cloning.
+- New nodes are cloned from template VM 901 (`docker-template-ubuntu-server-24.04.04`) — set the NIC's VLAN tag to 40 after cloning.
 - Known issue: `docker-dev-1` advertises a stale Swarm address — see [open-items](../open-items.md).
 
 ## How traffic reaches a service

@@ -25,9 +25,8 @@ flowchart LR
 
 Installed directly on the host OS (not in containers) on every infrastructure node. IPs and subnet routes are in [ip-plan.md](../inventory/ip-plan.md#tailscale).
 
-- **Proxmox hosts** (`pvemaster1`, `pvenode1`) — required so corosync-qdevice can reach the EC2 QDevice.
+- **Proxmox hosts** (`pvemaster1`, `pvenode1`, `pvenode2`) — admin access, and they advertise the VLAN subnet routes for remote access.
 - **Swarm nodes** (`docker-dev-1`, `docker-worker-1`) — admin access. No `ufw` on `docker-dev-1`.
-- **EC2 QDevice** — cluster quorum; the link is a direct connection, not via a DERP relay.
 
 ### Remote access
 
@@ -40,7 +39,7 @@ How Docker apps and Kubernetes are reached from outside the house:
 | Kubernetes (Headlamp, ingress, `kubectl`) | Subnet route to VLAN 30 (MetalLB `192.168.30.210–250`, API `192.168.30.10:6443`) |
 | Proxmox / Docker hosts (SSH, UIs) | Directly on their Tailscale IPs |
 
-- **Subnet routers:** `pvemaster1` and `pvenode1`, both advertising VLANs 10, 30, 40, with IP forwarding enabled.
+- **Subnet routers:** `pvemaster1`, `pvenode1` and `pvenode2`, all advertising VLANs 10, 30, 40 (`pvemaster1` and `pvenode2` checked 2026-10-27), with IP forwarding enabled.
 - **Split DNS:** Tailscale admin console → DNS → custom nameserver `192.168.10.2`, restricted to `home.capilabs.dev`.
 - VLANs 1 and 20 are deliberately not advertised.
 
@@ -53,4 +52,3 @@ How Docker apps and Kubernetes are reached from outside the house:
 ## NFS
 
 - DXP2800 exports NFS on VLAN 20 (`192.168.20.2`), mounted cluster-wide.
-- `Mem256` export: `exportfs` failed on hostname resolution — fixed by using IPs or `/etc/hosts` entries.

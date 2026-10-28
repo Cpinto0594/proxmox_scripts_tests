@@ -17,8 +17,8 @@ tags:
 
 | | |
 |---|---|
-| **Applies to** | `pvenode1` (Dell OptiPlex Micro 7010), `pvemaster1` / `master1` (HP Pro Mini 400 G9) |
-| **CPU** | Intel Core i5-13500T (14C/20T, 35 W, Tjmax 100 °C) |
+| **Applies to** | `pvenode1` (Dell OptiPlex Micro 7010), `pvenode2` (HP Pro Mini 400 G9, formerly `pvemaster1` / `master1`), `pvemaster1` (HP Elite Mini 800 G9) |
+| **CPU** | Intel Core i5-13500T (14C/20T, 35 W, Tjmax 100 °C) on `pvenode1` and `pvenode2`; i7-12700T on `pvemaster1` |
 | **Driver** | `intel_pstate` (active mode) |
 | **Date applied** | 2026-10-15 |
 
@@ -198,7 +198,6 @@ hotter** than the HP Pro Mini 400 G9. This is a cooling/chassis difference, not 
 - 70s °C sustained is safe: Tjmax is 100 °C. Use the `high`/`crit` values from `sensors`
   and each node's own baseline for alerting rather than generic numbers.
 
-### Third node
+### Hardware swap (2026-10-27)
 
-Apply the same unit when the third node joins. This is a good candidate for the Ansible
-baseline so every node gets it consistently.
+The HP Pro Mini measured here is now `pvenode2` (`192.168.1.92`). `pvemaster1` is new hardware (HP Elite Mini 800 G9) running the cloned disk. `pvenode2` uses the same setting as the other nodes. TODO: re-check temperatures on the new `pvemaster1`, since that hardware is unmeasured. This setting is a good candidate for the Ansible baseline so every node gets it consistently.

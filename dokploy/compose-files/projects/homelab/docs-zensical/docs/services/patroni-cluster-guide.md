@@ -382,7 +382,7 @@ The VIP should appear on pg2 within a couple of seconds. Also test killing HAPro
 - VRRP (protocol 112) must be allowed on VLAN 40 between the VMs.
 
 **Placement across Proxmox hosts**
-- With only two physical nodes, at least two VMs share a host, so a host failure can take out a majority of etcd. Once the third node arrives, migrate VM3 to it (`qm migrate <vmid> <node>`). IP and MAC are preserved on the same VLAN, so no cluster config changes are needed.
+- Put one VM on each Proxmox host (`pvemaster1`, `pvenode1`, `pvenode2`); if two VMs share a host, a host failure can take out a majority of etcd. To move a VM, use `qm migrate <vmid> <node>`. IP and MAC are preserved on the same VLAN, so no cluster config changes are needed.
 - Offline migration drops that node briefly, like a reboot. Cluster stays up as long as the other two remain healthy.
 
 **VLAN**
@@ -403,7 +403,6 @@ The VIP should appear on pg2 within a couple of seconds. Also test killing HAPro
 
 ## 7. Next steps
 
-- Move VM3 to the third Proxmox node when it arrives.
 - Add backups (pgBackRest) and TLS for etcd and Patroni's REST API.
 - Add a read-only HAProxy listener using Patroni's `/replica` endpoint to spread read traffic across replicas.
 - Optionally redo the same architecture on Kubernetes (StatefulSets, custom Patroni image, HAProxy for primary routing) or with an operator once the mechanics are familiar.

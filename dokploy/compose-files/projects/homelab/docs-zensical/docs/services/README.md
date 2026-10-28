@@ -45,20 +45,13 @@ Everything running on the Docker nodes, from `docker ps`, `docker inspect` and `
 | Technitium DNS | LXC 108 on `pvemaster1` | `192.168.10.2` | Native install |
 | Headlamp | Kubernetes | MetalLB IP in `192.168.30.210–250` | Remote access via Tailscale (VLAN 30 route) |
 
-## Not found on the Docker nodes
-
-| Service | Last known | Status |
-|---|---|---|
-| Home Assistant | Swarm on `docker-worker-1`, `homeassistant.homelab.capilabs.dev` | TODO: removed, or running elsewhere? |
-| Frigate | `docker-dev-1`, 5× Tapo C200 via RTSP | TODO: removed, or running elsewhere? |
-
 ## Planned
 
 | Service | Where | Notes |
 |---|---|---|
 | Pterodactyl Panel | `docker-worker-1`, Dokploy | MariaDB + Redis, `pterodactyl.homelab.capilabs.dev` |
-| Pterodactyl Wings | Dedicated node, plain Compose | Needs host net, privileged, docker.sock |
-| PostgreSQL HA (Patroni + etcd) | VMs 101/105/106 (created, stopped), VLAN 40 | Learning lab |
+| Pterodactyl Wings | VM 110 `wings-gameserver-01` on `pvenode1` (created, stopped), plain Compose | Needs host net, privileged, docker.sock |
+| PostgreSQL HA (Patroni + etcd) | 3 VMs on VLAN 40 | Learning lab; VMs not created yet |
 | MariaDB Galera + MaxScale | 3 VMs | Learning lab, latest stable MariaDB |
 
 ## Retired

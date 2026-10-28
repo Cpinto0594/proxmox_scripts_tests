@@ -5,7 +5,7 @@ Hard-won lessons. Check here before debugging.
 ## Dokploy / Swarm / Traefik
 
 - **Traefik ignores top-level `labels:` on Swarm services.** Use `deploy.labels`. Symptom: service runs fine but Traefik never routes to it (Beszel on `docker-worker-1`).
-- **Dokploy Compose Type is permanent.** Plain Compose vs Swarm is set at creation. Placement constraints do nothing on a plain-Compose app (Home Assistant landed on the wrong node). Recreate the app.
+- **Dokploy Compose Type is permanent.** Plain Compose vs Swarm is set at creation. Placement constraints do nothing on a plain-Compose app. Recreate the app.
 - **Dokploy "Deploy" doesn't always recreate containers.** After env/volume changes, `docker compose down && up -d` (or `docker service update --force`).
 - **Swarm `mode: host` ports have no `host_ip`.** They bind on all interfaces of the node. Use a firewall to restrict.
 - **`swarm init --force-new-cluster` ignores `--advertise-addr`** (known Docker bug). Stale address stays.
@@ -28,8 +28,8 @@ Hard-won lessons. Check here before debugging.
 
 ## Proxmox / storage / network
 
-- **QDevice needs Tailscale on the host OS**, not in a VM.
-- **`exportfs` fails on unresolvable hostnames** — use IPs or `/etc/hosts`.
 - **OptiPlex onboard NIC is 1G only**; USB RTL8156 adapters do a real 2.35 Gbit/s.
 - **Client-side VPN can hijack LAN traffic.** A NAS web UI that looked "unreachable" was actually a VPN on the laptop intercepting the traffic. Check this first.
+- **Bridge names must match across Proxmox nodes for migration.** Guests attach to `vmbr1`; a node installed with a differently named bridge (`pvenode2` initially had `vmbr0`) can't receive them. Use `vmbr1` for the USB-adapter bridge on every node.
 - **HDMI switch EDID** breaks the OptiPlex console — use an EDID emulator.
+- **Cloning a Proxmox node's disk to new hardware keeps the old NIC names.** `/etc/network/interfaces` binds `vmbr1` to a MAC-based `enx<mac>` USB adapter name, so the clone has network only because the same adapter moved with it. The onboard NIC is named differently on new hardware (`nic0` became `eno1`), so `vmbr0`'s `bridge-ports` had to be changed to `eno1`. Hostname, IPs and Tailscale state are cloned too: make sure the original machine doesn't come up under the same identity (the old `pvemaster1` was renamed `pvenode2` for this reason).
