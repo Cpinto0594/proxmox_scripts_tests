@@ -61,7 +61,7 @@ chmod +x /root/create-technitium-lxc.sh
 ```
 
 On the node, create a test/secondary server on a free VLAN 10 address
-(it prompts for the new admin password):
+(it asks for the hostname, the Technitium domain and the admin password):
 
 ```bash
 IP=192.168.10.3/24 GATEWAY=192.168.10.1 ./create-technitium-lxc.sh
@@ -78,6 +78,10 @@ RESTORE_BACKUP=/root/technitium-backup.zip \
 
 `./create-technitium-lxc.sh --help` lists every option.
 
+`CT_HOSTNAME`, `DNS_SERVER_DOMAIN` and `ADMIN_PASSWORD` have no defaults (the
+obvious ones would clash with the production server). Pass them as variables to
+skip the prompts; without a terminal (e.g. run from Ansible) they must be set.
+
 ### Options
 
 | Variable | Default | Notes |
@@ -85,7 +89,7 @@ RESTORE_BACKUP=/root/technitium-backup.zip \
 | `IP` | **required** | CIDR, e.g. `192.168.10.3/24` |
 | `GATEWAY` | **required** | VLAN gateway |
 | `CTID` | next free ID | Checked against the whole cluster |
-| `CT_HOSTNAME` | `technitium-dns` | |
+| `CT_HOSTNAME` | **prompted** | e.g. `technitium-dns-2`. Letters, digits, `-` |
 | `BRIDGE` / `VLAN` | `vmbr1` / `10` | `VLAN=` (empty) for untagged |
 | `CORES` / `MEMORY` / `SWAP` | `1` / `512` / `512` | Same size as LXC 108 |
 | `DISK_GB` / `STORAGE` | `10` / `local-lvm` | |
@@ -94,11 +98,11 @@ RESTORE_BACKUP=/root/technitium-backup.zip \
 | `SEARCHDOMAIN` / `TIMEZONE` | `home.capilabs.dev` / `America/Bogota` | |
 | `SSH_KEY_FILE` | none | Public key(s) for `root` |
 | `TAGS` | `dns;infra` | Proxmox tags |
-| `DNS_SERVER_DOMAIN` | `dns.home.capilabs.dev` | Technitium's own FQDN |
+| `DNS_SERVER_DOMAIN` | **prompted** | Technitium's own FQDN, e.g. `dns2.home.capilabs.dev`. Use a different one per server |
 | `FORWARDERS` / `FORWARDER_PROTOCOL` | `1.1.1.1,8.8.8.8` / `Udp` | |
 | `RECURSION` | `AllowOnlyForPrivateNetworks` | |
 | `ENABLE_BLOCKING` / `BLOCK_LIST_URLS` | `true` / none | |
-| `ADMIN_PASSWORD` | prompted | Min. 8 chars. Store it in Infisical, e.g. `infisical:/homelab/technitium/admin-password` (TODO: confirm path) |
+| `ADMIN_PASSWORD` | **prompted** (hidden, asked twice) | Min. 8 chars. Store it in Infisical, e.g. `infisical:/homelab/technitium/admin-password` (TODO: confirm path) |
 | `RESTORE_BACKUP` | none | Technitium backup `.zip` to restore |
 | `FORCE` | `0` | `1` skips the "IP already answers ping" check |
 

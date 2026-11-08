@@ -6,6 +6,24 @@ Each entry: what changed, why, files touched, and follow-ups. Keep the detailed
 
 ---
 
+## 2026-11-08 — Technitium LXC script: prompt for hostname and domain
+
+**What:** `scripts/proxmox/create-technitium-lxc.sh` now asks for `CT_HOSTNAME` and
+`DNS_SERVER_DOMAIN` (as well as the admin password) when they aren't set, instead of
+defaulting to `technitium-dns` / `dns.home.capilabs.dev`. The hostname is validated.
+Without a terminal, all three must be passed as variables.
+
+**Why:** The old defaults were the production server's identity, so a second server
+could copy them by accident. (A first attempt made them hard-required; reverted in
+favour of prompting.)
+
+**Files:** `scripts/proxmox/create-technitium-lxc.sh`,
+`docs-zensical/docs/services/technitium-dns-lxc.md`
+
+**Follow-ups:** none new.
+
+---
+
 ## 2026-11-08 — Technitium DNS LXC install script
 
 **What:** Script to create a Technitium DNS Server in a new Proxmox LXC, so the

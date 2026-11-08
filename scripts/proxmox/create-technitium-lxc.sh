@@ -18,9 +18,13 @@ Required:
   IP                  Container IPv4 in CIDR form, e.g. 192.168.10.3/24
   GATEWAY             Default gateway for that VLAN
 
+Prompted for when not set:
+  CT_HOSTNAME         Container hostname, e.g. technitium-dns-2
+  DNS_SERVER_DOMAIN   Technitium's own FQDN, e.g. dns2.home.capilabs.dev
+  ADMIN_PASSWORD      New password for the web console 'admin' user (min. 8 chars)
+
 Optional (default):
   CTID                Container ID (next free ID in the cluster)
-  CT_HOSTNAME         technitium-dns
   BRIDGE              vmbr1
   VLAN                10            (empty = untagged)
   CORES               1
@@ -35,13 +39,11 @@ Optional (default):
   TIMEZONE            America/Bogota
   SSH_KEY_FILE        (none)        public key file for root, e.g. ~/.ssh/id_ed25519.pub
   TAGS                dns;infra
-  DNS_SERVER_DOMAIN   dns.home.capilabs.dev
   FORWARDERS          1.1.1.1,8.8.8.8
   FORWARDER_PROTOCOL  Udp           (Udp, Tcp, Tls, Https, Quic)
   RECURSION           AllowOnlyForPrivateNetworks
   ENABLE_BLOCKING     true
   BLOCK_LIST_URLS     (none)        comma-separated
-  ADMIN_PASSWORD      (prompted)    new password for the web console 'admin' user
   RESTORE_BACKUP      (none)        path to a Technitium backup .zip to restore
   FORCE               0             1 = skip the "IP already answers ping" check
 EOF
@@ -56,7 +58,7 @@ die()  { printf '\e[1;31mERROR:\e[0m %s\n' "$*" >&2; exit 1; }
 # ---- settings ---------------------------------------------------------------
 IP="${IP:-}"
 GATEWAY="${GATEWAY:-}"
-CT_HOSTNAME="${CT_HOSTNAME:-technitium-dns}"
+CT_HOSTNAME="${CT_HOSTNAME:-}"
 BRIDGE="${BRIDGE:-vmbr1}"
 VLAN="${VLAN-10}"
 CORES="${CORES:-1}"
@@ -71,7 +73,7 @@ SEARCHDOMAIN="${SEARCHDOMAIN:-home.capilabs.dev}"
 TIMEZONE="${TIMEZONE:-America/Bogota}"
 SSH_KEY_FILE="${SSH_KEY_FILE:-}"
 TAGS="${TAGS:-dns;infra}"
-DNS_SERVER_DOMAIN="${DNS_SERVER_DOMAIN:-dns.home.capilabs.dev}"
+DNS_SERVER_DOMAIN="${DNS_SERVER_DOMAIN:-}"
 FORWARDERS="${FORWARDERS:-1.1.1.1,8.8.8.8}"
 FORWARDER_PROTOCOL="${FORWARDER_PROTOCOL:-Udp}"
 RECURSION="${RECURSION:-AllowOnlyForPrivateNetworks}"
@@ -108,6 +110,19 @@ if [[ "$FORCE" != "1" ]] && ping -c1 -W1 "${IP%/*}" >/dev/null 2>&1; then
   die "${IP%/*} already answers ping - pick a free IP or set FORCE=1"
 fi
 
+# Prompt for anything identity-related that wasn't passed in. No defaults on
+# purpose: the obvious ones would clash with the production server.
+if [[ -z "$CT_HOSTNAME" || -z "$DNS_SERVER_DOMAIN" || -z "$ADMIN_PASSWORD" ]] && [[ ! -t 0 ]]; then
+  die "CT_HOSTNAME, DNS_SERVER_DOMAIN and ADMIN_PASSWORD must be set when not running interactively"
+fi
+while [[ -z "$CT_HOSTNAME" ]]; do
+  read -rp "Container hostname (e.g. technitium-dns-2): " CT_HOSTNAME
+done
+[[ "$CT_HOSTNAME" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$ ]] \
+  || die "CT_HOSTNAME must be a valid hostname (letters, digits, '-'), got: $CT_HOSTNAME"
+while [[ -z "$DNS_SERVER_DOMAIN" ]]; do
+  read -rp "Technitium DNS server domain (e.g. dns2.home.capilabs.dev): " DNS_SERVER_DOMAIN
+done
 if [[ -z "$ADMIN_PASSWORD" ]]; then
   read -rsp "New Technitium admin password: " ADMIN_PASSWORD; echo
   read -rsp "Repeat password: " pw2; echo
