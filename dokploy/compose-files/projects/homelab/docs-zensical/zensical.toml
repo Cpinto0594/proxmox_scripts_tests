@@ -19,11 +19,13 @@ nav = [
     { "Kubernetes" = "platforms/kubernetes.md" },
     { "Dokploy / Swarm" = "platforms/dokploy-swarm.md" },
     { "Database Clusters" = [
-      {"PG Patroni Cluster" = "services/patroni-cluster-guide.md"}
-      ] 
-    },
+      { "PG Patroni Cluster" = "services/patroni-cluster-guide.md" },
+    ] },
   ] },
-  { "Services" = "services/README.md" },
+  { "Services" = [
+    "services/README.md",
+    { "Technitium DNS (LXC)" = "services/technitium-dns-lxc.md" },
+  ] },
   { "Gotchas" = "gotchas.md" },
   { "Open items" = "open-items.md" },
   { "Work log" = "worklog.md" },

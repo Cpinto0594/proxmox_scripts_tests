@@ -47,6 +47,7 @@ How Docker apps and Kubernetes are reached from outside the house:
 
 - Technitium DNS Server at `192.168.10.2`.
 - Runs natively in LXC 108 on `pvemaster1` (moved off Docker Compose on `docker-dev-1`), so DNS doesn't depend on the Swarm stack.
+- Build / rebuild / migrate: [Technitium DNS in an LXC](../services/technitium-dns-lxc.md) (script: `scripts/proxmox/create-technitium-lxc.sh`).
 - TODO: list zones, conditional forwarders, upstream resolvers, and DHCP DNS settings.
 
 ## NFS
