@@ -6,6 +6,23 @@ Each entry: what changed, why, files touched, and follow-ups. Keep the detailed
 
 ---
 
+## 2026-11-08 — Technitium LXC script: more required settings
+
+**What:** `CT_HOSTNAME`, `DNS_SERVER_DOMAIN` and `ADMIN_PASSWORD` are now required
+(no defaults) in `scripts/proxmox/create-technitium-lxc.sh`. The interactive password
+prompt was removed; set the password with `read -rs ADMIN_PASSWORD` first.
+`CT_HOSTNAME` is checked to be a valid hostname.
+
+**Why:** Defaults (`technitium-dns`, `dns.home.capilabs.dev`) matched the production
+server, so a second server could end up with the same identity by accident.
+
+**Files:** `scripts/proxmox/create-technitium-lxc.sh`,
+`docs-zensical/docs/services/technitium-dns-lxc.md`
+
+**Follow-ups:** none new.
+
+---
+
 ## 2026-11-08 — Technitium DNS LXC install script
 
 **What:** Script to create a Technitium DNS Server in a new Proxmox LXC, so the
