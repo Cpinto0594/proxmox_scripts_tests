@@ -16,7 +16,7 @@ Swarm stack. See [network → DNS](../network/README.md#dns).
 
 ```mermaid
 flowchart TD
-    A[Pre-flight checks<br/>root, pct, IP/GW given,<br/>CTID free in cluster, IP not answering ping] --> B[Find latest Debian 12 template<br/>download if missing]
+    A[Pre-flight checks<br/>root, pct, IP/GW given,<br/>CTID free in cluster, IP not answering ping] --> B[Ask for hostname, domain, password,<br/>container image (Debian/Ubuntu list)<br/>download image if missing]
     B --> C[pct create<br/>unprivileged, nesting=1, onboot, startup order=1<br/>vmbr1 + VLAN tag]
     C --> D[Wait for network]
     D --> E[apt upgrade + curl, jq, dnsutils]
@@ -61,7 +61,8 @@ chmod +x /root/create-technitium-lxc.sh
 ```
 
 On the node, create a test/secondary server on a free VLAN 10 address
-(it asks for the hostname, the Technitium domain and the admin password):
+(it asks for the hostname, the Technitium domain, the admin password and the
+container image):
 
 ```bash
 IP=192.168.10.3/24 GATEWAY=192.168.10.1 ./create-technitium-lxc.sh
@@ -78,9 +79,34 @@ RESTORE_BACKUP=/root/technitium-backup.zip \
 
 `./create-technitium-lxc.sh --help` lists every option.
 
-`CT_HOSTNAME`, `DNS_SERVER_DOMAIN` and `ADMIN_PASSWORD` have no defaults (the
-obvious ones would clash with the production server). Pass them as variables to
-skip the prompts; without a terminal (e.g. run from Ansible) they must be set.
+### Prompts
+
+Anything you don't pass as a variable is asked for. Press **Enter** to take the
+default in brackets:
+
+```text
+Container hostname [technitium-dns-2]:
+Technitium DNS server domain [dns2.home.capilabs.dev]:
+New Technitium admin password:
+Repeat password:
+Available container images:
+   1) debian-12-standard_12.2-1_amd64.tar.zst
+   2) debian-12-standard_12.7-1_amd64.tar.zst  (default)
+   3) debian-13-standard_13.1-1_amd64.tar.zst
+   4) ubuntu-24.04-standard_24.04-2_amd64.tar.zst
+Container image - number or name [debian-12-standard_12.7-1_amd64.tar.zst]:
+```
+
+- The defaults are for a **second** server, so accepting them never copies the
+  production server's identity (`technitium-dns` / `dns.home.capilabs.dev`).
+- The password has no default and must be at least 8 characters.
+- The image list is whatever `pveam available` offers, limited to Debian and
+  Ubuntu (the script installs packages with `apt`). Type a number or the full
+  name; anything else asks again. The default is the newest match for
+  `TEMPLATE_PATTERN`. The list above is an example — the real one depends on
+  the node.
+- Without a terminal (e.g. from Ansible) nothing is asked: hostname, domain and
+  image use their defaults, and `ADMIN_PASSWORD` must be set.
 
 ### Options
 
@@ -89,20 +115,21 @@ skip the prompts; without a terminal (e.g. run from Ansible) they must be set.
 | `IP` | **required** | CIDR, e.g. `192.168.10.3/24` |
 | `GATEWAY` | **required** | VLAN gateway |
 | `CTID` | next free ID | Checked against the whole cluster |
-| `CT_HOSTNAME` | **prompted** | e.g. `technitium-dns-2`. Letters, digits, `-` |
+| `CT_HOSTNAME` | prompted, `technitium-dns-2` | Letters, digits, `-` |
 | `BRIDGE` / `VLAN` | `vmbr1` / `10` | `VLAN=` (empty) for untagged |
 | `CORES` / `MEMORY` / `SWAP` | `1` / `512` / `512` | Same size as LXC 108 |
 | `DISK_GB` / `STORAGE` | `10` / `local-lvm` | |
-| `TEMPLATE_STORAGE` / `TEMPLATE_PATTERN` | `local` / `debian-12-standard` | Latest match from `pveam available` |
+| `TEMPLATE` | prompted, newest `TEMPLATE_PATTERN` match | Container image, e.g. `debian-12-standard_12.7-1_amd64.tar.zst`. Debian/Ubuntu only; `ostype` is set to match |
+| `TEMPLATE_STORAGE` / `TEMPLATE_PATTERN` | `local` / `debian-12-standard` | Where images are stored / which one is the default |
 | `NAMESERVER` | `1.1.1.1` | The container's **own** resolver (not itself, so installs/updates work even if Technitium is down) |
 | `SEARCHDOMAIN` / `TIMEZONE` | `home.capilabs.dev` / `America/Bogota` | |
 | `SSH_KEY_FILE` | none | Public key(s) for `root` |
 | `TAGS` | `dns;infra` | Proxmox tags |
-| `DNS_SERVER_DOMAIN` | **prompted** | Technitium's own FQDN, e.g. `dns2.home.capilabs.dev`. Use a different one per server |
+| `DNS_SERVER_DOMAIN` | prompted, `dns2.home.capilabs.dev` | Technitium's own FQDN. Use a different one per server |
 | `FORWARDERS` / `FORWARDER_PROTOCOL` | `1.1.1.1,8.8.8.8` / `Udp` | |
 | `RECURSION` | `AllowOnlyForPrivateNetworks` | |
 | `ENABLE_BLOCKING` / `BLOCK_LIST_URLS` | `true` / none | |
-| `ADMIN_PASSWORD` | **prompted** (hidden, asked twice) | Min. 8 chars. Store it in Infisical, e.g. `infisical:/homelab/technitium/admin-password` (TODO: confirm path) |
+| `ADMIN_PASSWORD` | prompted (hidden, asked twice), no default | Min. 8 chars. Store it in Infisical, e.g. `infisical:/homelab/technitium/admin-password` (TODO: confirm path) |
 | `RESTORE_BACKUP` | none | Technitium backup `.zip` to restore |
 | `FORCE` | `0` | `1` skips the "IP already answers ping" check |
 

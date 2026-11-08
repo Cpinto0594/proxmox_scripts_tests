@@ -6,6 +6,33 @@ Each entry: what changed, why, files touched, and follow-ups. Keep the detailed
 
 ---
 
+## 2026-11-08 — Technitium LXC script: prompt defaults and image picker
+
+**What:** In `scripts/proxmox/create-technitium-lxc.sh`:
+
+- Pressing Enter at a prompt takes the default: `technitium-dns-2` for the
+  hostname, `dns2.home.capilabs.dev` for the Technitium domain. The password still
+  has no default.
+- New prompt for the **container image** (`TEMPLATE`): a numbered list of the
+  Debian/Ubuntu templates from `pveam available`; enter a number, a name, or Enter
+  for the newest `TEMPLATE_PATTERN` match. Invalid answers ask again. `--ostype`
+  follows the chosen image (debian/ubuntu).
+- Without a terminal, hostname/domain/image use their defaults; only
+  `ADMIN_PASSWORD` must be set.
+
+**Why:** Faster runs (Enter through the prompts), and a way to pick e.g. Debian 13
+or Ubuntu without editing the script.
+
+**Tested:** `shellcheck` and the stand-in Proxmox test run (Enter for everything,
+pick by number, by name, invalid input, no terminal).
+
+**Files:** `scripts/proxmox/create-technitium-lxc.sh`,
+`docs-zensical/docs/services/technitium-dns-lxc.md`
+
+**Follow-ups:** none new.
+
+---
+
 ## 2026-11-08 — Technitium LXC script: prompt for hostname and domain
 
 **What:** `scripts/proxmox/create-technitium-lxc.sh` now asks for `CT_HOSTNAME` and

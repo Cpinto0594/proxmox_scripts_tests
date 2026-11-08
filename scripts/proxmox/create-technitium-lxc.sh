@@ -18,10 +18,16 @@ Required:
   IP                  Container IPv4 in CIDR form, e.g. 192.168.10.3/24
   GATEWAY             Default gateway for that VLAN
 
-Prompted for when not set:
-  CT_HOSTNAME         Container hostname, e.g. technitium-dns-2
-  DNS_SERVER_DOMAIN   Technitium's own FQDN, e.g. dns2.home.capilabs.dev
-  ADMIN_PASSWORD      New password for the web console 'admin' user (min. 8 chars)
+Prompted for when not set (Enter = default shown in brackets):
+  CT_HOSTNAME         Container hostname            [technitium-dns-2]
+  DNS_SERVER_DOMAIN   Technitium's own FQDN         [dns2.home.capilabs.dev]
+  TEMPLATE            Container image (CT template) [latest TEMPLATE_PATTERN match]
+                      Pick from a numbered list of Debian/Ubuntu templates, or
+                      set e.g. TEMPLATE=debian-12-standard_12.7-1_amd64.tar.zst
+  ADMIN_PASSWORD      New password for the web console 'admin' user (min. 8 chars,
+                      no default)
+Without a terminal, CT_HOSTNAME/DNS_SERVER_DOMAIN/TEMPLATE fall back to their
+defaults; ADMIN_PASSWORD must be set.
 
 Optional (default):
   CTID                Container ID (next free ID in the cluster)
@@ -33,7 +39,7 @@ Optional (default):
   DISK_GB             10
   STORAGE             local-lvm     (rootfs storage)
   TEMPLATE_STORAGE    local         (where CT templates are stored)
-  TEMPLATE_PATTERN    debian-12-standard
+  TEMPLATE_PATTERN    debian-12-standard  (picks the default TEMPLATE)
   NAMESERVER          1.1.1.1       (the container's own resolver)
   SEARCHDOMAIN        home.capilabs.dev
   TIMEZONE            America/Bogota
@@ -68,6 +74,7 @@ DISK_GB="${DISK_GB:-10}"
 STORAGE="${STORAGE:-local-lvm}"
 TEMPLATE_STORAGE="${TEMPLATE_STORAGE:-local}"
 TEMPLATE_PATTERN="${TEMPLATE_PATTERN:-debian-12-standard}"
+TEMPLATE="${TEMPLATE:-}"
 NAMESERVER="${NAMESERVER:-1.1.1.1}"
 SEARCHDOMAIN="${SEARCHDOMAIN:-home.capilabs.dev}"
 TIMEZONE="${TIMEZONE:-America/Bogota}"
@@ -110,19 +117,29 @@ if [[ "$FORCE" != "1" ]] && ping -c1 -W1 "${IP%/*}" >/dev/null 2>&1; then
   die "${IP%/*} already answers ping - pick a free IP or set FORCE=1"
 fi
 
-# Prompt for anything identity-related that wasn't passed in. No defaults on
-# purpose: the obvious ones would clash with the production server.
-if [[ -z "$CT_HOSTNAME" || -z "$DNS_SERVER_DOMAIN" || -z "$ADMIN_PASSWORD" ]] && [[ ! -t 0 ]]; then
-  die "CT_HOSTNAME, DNS_SERVER_DOMAIN and ADMIN_PASSWORD must be set when not running interactively"
-fi
-while [[ -z "$CT_HOSTNAME" ]]; do
-  read -rp "Container hostname (e.g. technitium-dns-2): " CT_HOSTNAME
-done
+# Prompt for whatever wasn't passed in. Defaults are for a *second* server, so
+# accepting them never copies the production server's identity.
+DEFAULT_CT_HOSTNAME="technitium-dns-2"
+DEFAULT_DNS_SERVER_DOMAIN="dns2.home.capilabs.dev"
+INTERACTIVE=0; [[ -t 0 ]] && INTERACTIVE=1
+
+# ask VAR "Question" default  -> keeps VAR if already set, else prompts (Enter = default)
+ask() {
+  local var="$1" question="$2" default="$3" answer=""
+  [[ -n "${!var}" ]] && return 0
+  if [[ $INTERACTIVE -eq 1 ]]; then
+    read -rp "${question} [${default}]: " answer
+  fi
+  printf -v "$var" '%s' "${answer:-$default}"
+}
+
+[[ -n "$ADMIN_PASSWORD" || $INTERACTIVE -eq 1 ]] \
+  || die "ADMIN_PASSWORD must be set when not running interactively"
+
+ask CT_HOSTNAME "Container hostname" "$DEFAULT_CT_HOSTNAME"
 [[ "$CT_HOSTNAME" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$ ]] \
   || die "CT_HOSTNAME must be a valid hostname (letters, digits, '-'), got: $CT_HOSTNAME"
-while [[ -z "$DNS_SERVER_DOMAIN" ]]; do
-  read -rp "Technitium DNS server domain (e.g. dns2.home.capilabs.dev): " DNS_SERVER_DOMAIN
-done
+ask DNS_SERVER_DOMAIN "Technitium DNS server domain" "$DEFAULT_DNS_SERVER_DOMAIN"
 if [[ -z "$ADMIN_PASSWORD" ]]; then
   read -rsp "New Technitium admin password: " ADMIN_PASSWORD; echo
   read -rsp "Repeat password: " pw2; echo
@@ -131,11 +148,43 @@ fi
 [[ ${#ADMIN_PASSWORD} -ge 8 ]] || die "admin password must be at least 8 characters"
 
 # ---- template ---------------------------------------------------------------
-log "Looking for the latest '${TEMPLATE_PATTERN}' template"
+log "Refreshing the template list"
 pveam update >/dev/null || warn "pveam update failed, using the cached template list"
-TEMPLATE="$(pveam available --section system | awk '{print $2}' \
-            | grep -E "^${TEMPLATE_PATTERN}" | sort -V | tail -n1 || true)"
-[[ -n "$TEMPLATE" ]] || die "no template matches '${TEMPLATE_PATTERN}' (see: pveam available --section system)"
+# The script installs packages with apt, so only offer Debian/Ubuntu images.
+mapfile -t TEMPLATES < <(pveam available --section system | awk '{print $2}' \
+                          | grep -E '^(debian|ubuntu)-' | sort -V)
+[[ ${#TEMPLATES[@]} -gt 0 ]] || die "no Debian/Ubuntu templates found (see: pveam available --section system)"
+DEFAULT_TEMPLATE="$(printf '%s\n' "${TEMPLATES[@]}" | grep -E "^${TEMPLATE_PATTERN}" | tail -n1 || true)"
+[[ -n "$DEFAULT_TEMPLATE" ]] || DEFAULT_TEMPLATE="${TEMPLATES[-1]}"
+
+if [[ -z "$TEMPLATE" && $INTERACTIVE -eq 1 ]]; then
+  echo "Available container images:"
+  for i in "${!TEMPLATES[@]}"; do
+    mark=""; [[ "${TEMPLATES[$i]}" == "$DEFAULT_TEMPLATE" ]] && mark="  (default)"
+    printf '  %2d) %s%s\n' "$((i + 1))" "${TEMPLATES[$i]}" "$mark"
+  done
+  while true; do
+    read -rp "Container image - number or name [${DEFAULT_TEMPLATE}]: " answer
+    if [[ -z "$answer" ]]; then
+      TEMPLATE="$DEFAULT_TEMPLATE"; break
+    elif [[ "$answer" =~ ^[0-9]+$ ]] && (( answer >= 1 && answer <= ${#TEMPLATES[@]} )); then
+      TEMPLATE="${TEMPLATES[$((answer - 1))]}"; break
+    elif printf '%s\n' "${TEMPLATES[@]}" | grep -qxF "$answer"; then
+      TEMPLATE="$answer"; break
+    fi
+    warn "'$answer' is not in the list - enter 1-${#TEMPLATES[@]}, a name, or Enter for the default"
+  done
+fi
+TEMPLATE="${TEMPLATE:-$DEFAULT_TEMPLATE}"
+printf '%s\n' "${TEMPLATES[@]}" | grep -qxF "$TEMPLATE" \
+  || pveam list "$TEMPLATE_STORAGE" | grep -q "vztmpl/${TEMPLATE}" \
+  || die "unknown template '$TEMPLATE' (see: pveam available --section system)"
+case "$TEMPLATE" in
+  ubuntu-*) OSTYPE_PCT=ubuntu ;;
+  debian-*) OSTYPE_PCT=debian ;;
+  *) die "only Debian/Ubuntu templates are supported, got '$TEMPLATE'" ;;
+esac
+log "Using image ${TEMPLATE}"
 
 if pveam list "$TEMPLATE_STORAGE" | grep -q "vztmpl/${TEMPLATE}"; then
   log "Template already present: ${TEMPLATE_STORAGE}:vztmpl/${TEMPLATE}"
@@ -158,7 +207,7 @@ create_args=(
   --timezone "$TIMEZONE"
   --unprivileged 1 --features nesting=1
   --onboot 1 --startup order=1
-  --ostype debian
+  --ostype "$OSTYPE_PCT"
   --tags "$TAGS"
   --description "Technitium DNS Server - created by scripts/proxmox/create-technitium-lxc.sh"
 )
@@ -177,7 +226,7 @@ pct exec "$CTID" -- getent hosts download.technitium.com >/dev/null 2>&1 \
   || die "container ${CTID} can't resolve download.technitium.com - check IP/GATEWAY/VLAN/NAMESERVER"
 
 # ---- install Technitium -----------------------------------------------------
-log "Updating Debian and installing curl, jq, dnsutils"
+log "Updating packages and installing curl, jq, dnsutils"
 pct exec "$CTID" -- bash -c '
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq
