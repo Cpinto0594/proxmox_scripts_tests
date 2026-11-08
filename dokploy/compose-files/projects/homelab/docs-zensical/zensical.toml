@@ -26,6 +26,7 @@ nav = [
   { "Services" = "services/README.md" },
   { "Gotchas" = "gotchas.md" },
   { "Open items" = "open-items.md" },
+  { "Work log" = "worklog.md" },
   { "Issues" = [
     { "CPU Power Management" = "issues/proxmox/cpu-power-management.md" },
   ] },

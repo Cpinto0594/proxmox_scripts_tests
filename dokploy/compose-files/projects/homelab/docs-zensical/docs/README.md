@@ -52,6 +52,7 @@ flowchart TB
 | [services/](services/README.md) | Service catalog |
 | [gotchas.md](gotchas.md) | Hard-won lessons — read before debugging |
 | [open-items.md](open-items.md) | Unresolved problems and planned work |
+| [worklog.md](worklog.md) | Chronological log of work done, newest first |
 
 ## Conventions for this repo
 
