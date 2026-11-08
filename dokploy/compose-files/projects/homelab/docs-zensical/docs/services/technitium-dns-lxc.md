@@ -35,8 +35,8 @@ flowchart TD
   Debian 12 containers). It has `onboot=1` and `startup order=1`, so DNS
   starts before the other guests on that node.
 - The admin password goes to the container over stdin, so it never shows up
-  in a process list inside the container. Set it with `read -rs` (below) so it
-  stays out of your shell history too.
+  in a process list or in shell history (as long as you let the script prompt
+  for it).
 
 ## Prerequisites
 
@@ -60,26 +60,17 @@ scp scripts/proxmox/create-technitium-lxc.sh root@192.168.1.90:/root/
 chmod +x /root/create-technitium-lxc.sh
 ```
 
-On the node, set the admin password without it landing in shell history
-(take it from Infisical):
+On the node, create a test/secondary server on a free VLAN 10 address
+(it prompts for the new admin password):
 
 ```bash
-read -rsp "Technitium admin password: " ADMIN_PASSWORD && export ADMIN_PASSWORD
-```
-
-Create a test/secondary server on a free VLAN 10 address:
-
-```bash
-IP=192.168.10.3/24 GATEWAY=192.168.10.1 \
-CT_HOSTNAME=technitium-dns-2 DNS_SERVER_DOMAIN=dns2.home.capilabs.dev \
-./create-technitium-lxc.sh
+IP=192.168.10.3/24 GATEWAY=192.168.10.1 ./create-technitium-lxc.sh
 ```
 
 With your SSH key, a fixed ID, and the backup from the current server restored:
 
 ```bash
 CTID=109 IP=192.168.10.3/24 GATEWAY=192.168.10.1 \
-CT_HOSTNAME=technitium-dns-2 DNS_SERVER_DOMAIN=dns2.home.capilabs.dev \
 SSH_KEY_FILE=/root/.ssh/authorized_keys \
 RESTORE_BACKUP=/root/technitium-backup.zip \
 ./create-technitium-lxc.sh
@@ -94,7 +85,7 @@ RESTORE_BACKUP=/root/technitium-backup.zip \
 | `IP` | **required** | CIDR, e.g. `192.168.10.3/24` |
 | `GATEWAY` | **required** | VLAN gateway |
 | `CTID` | next free ID | Checked against the whole cluster |
-| `CT_HOSTNAME` | **required** | e.g. `technitium-dns-2`. Letters, digits, `-` |
+| `CT_HOSTNAME` | `technitium-dns` | |
 | `BRIDGE` / `VLAN` | `vmbr1` / `10` | `VLAN=` (empty) for untagged |
 | `CORES` / `MEMORY` / `SWAP` | `1` / `512` / `512` | Same size as LXC 108 |
 | `DISK_GB` / `STORAGE` | `10` / `local-lvm` | |
@@ -103,11 +94,11 @@ RESTORE_BACKUP=/root/technitium-backup.zip \
 | `SEARCHDOMAIN` / `TIMEZONE` | `home.capilabs.dev` / `America/Bogota` | |
 | `SSH_KEY_FILE` | none | Public key(s) for `root` |
 | `TAGS` | `dns;infra` | Proxmox tags |
-| `DNS_SERVER_DOMAIN` | **required** | Technitium's own FQDN, e.g. `dns2.home.capilabs.dev`. Use a different one per server |
+| `DNS_SERVER_DOMAIN` | `dns.home.capilabs.dev` | Technitium's own FQDN |
 | `FORWARDERS` / `FORWARDER_PROTOCOL` | `1.1.1.1,8.8.8.8` / `Udp` | |
 | `RECURSION` | `AllowOnlyForPrivateNetworks` | |
 | `ENABLE_BLOCKING` / `BLOCK_LIST_URLS` | `true` / none | |
-| `ADMIN_PASSWORD` | **required** | Min. 8 chars. Set it with `read -rs` (see above). Store it in Infisical, e.g. `infisical:/homelab/technitium/admin-password` (TODO: confirm path) |
+| `ADMIN_PASSWORD` | prompted | Min. 8 chars. Store it in Infisical, e.g. `infisical:/homelab/technitium/admin-password` (TODO: confirm path) |
 | `RESTORE_BACKUP` | none | Technitium backup `.zip` to restore |
 | `FORCE` | `0` | `1` skips the "IP already answers ping" check |
 
