@@ -16,7 +16,7 @@ Swarm stack. See [network → DNS](../network/README.md#dns).
 
 ```mermaid
 flowchart TD
-    A[Pre-flight checks<br/>root, pct, IP/GW given,<br/>CTID free in cluster, IP not answering ping] --> B[Ask for hostname, domain, password,<br/>container image (Debian/Ubuntu list)<br/>download image if missing]
+    A[Pre-flight checks<br/>root, pct, jq on the node - installed if missing,<br/>IP/GW given,<br/>CTID free in cluster, IP not answering ping] --> B[Ask for hostname, domain, password,<br/>container image (Debian/Ubuntu list)<br/>download image if missing]
     B --> C[pct create<br/>unprivileged, nesting=1, onboot, startup order=1<br/>vmbr1 + VLAN tag]
     C --> D[Wait for network]
     D --> E[apt upgrade + curl, jq, dnsutils]
@@ -41,6 +41,8 @@ flowchart TD
 ## Prerequisites
 
 - Root shell on the Proxmox node that should host the container.
+- `jq` on the node (the script reads the Technitium API replies with it). Proxmox
+  doesn't ship it, so the script runs `apt-get install jq` if it's missing.
 - A **free IP** for the container, and the VLAN gateway. All Proxmox nodes have
   `vmbr1` VLAN-aware and trunking VLANs 10/20/30/40
   ([proxmox.md](../platforms/proxmox.md#networking)), so `VLAN=10` works on any node.

@@ -96,6 +96,14 @@ API="http://127.0.0.1:5380/api"
 [[ $EUID -eq 0 ]] || die "run as root on a Proxmox node"
 command -v pct   >/dev/null || die "pct not found - is this a Proxmox VE node?"
 command -v pveam >/dev/null || die "pveam not found - is this a Proxmox VE node?"
+# jq parses the Technitium API responses on this node; Proxmox doesn't ship it.
+if ! command -v jq >/dev/null; then
+  log "jq not found on $(hostname), installing it"
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq jq >/dev/null 2>&1 \
+    || { apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq jq >/dev/null; } \
+    || die "could not install jq - install it with: apt-get install jq"
+  command -v jq >/dev/null || die "jq still not found after installing"
+fi
 
 [[ -n "$IP" ]]      || { usage; die "IP is required (CIDR, e.g. 192.168.10.3/24)"; }
 [[ -n "$GATEWAY" ]] || { usage; die "GATEWAY is required"; }

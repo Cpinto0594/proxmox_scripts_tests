@@ -6,6 +6,26 @@ Each entry: what changed, why, files touched, and follow-ups. Keep the detailed
 
 ---
 
+## 2026-11-08 — Technitium LXC script: install jq on the node if missing
+
+**What:** `scripts/proxmox/create-technitium-lxc.sh` checks for `jq` on the Proxmox
+node during pre-flight and installs it with `apt-get` if it isn't there (retrying
+after `apt-get update`). It stops with a clear message if the install fails.
+
+**Why:** The script parses the Technitium API responses with `jq` on the node, and
+Proxmox VE doesn't include `jq` by default — the first real run would have failed
+at the login step.
+
+**Tested:** `shellcheck` and the stand-in test run: jq missing (installed once),
+jq present (no install), install failing (clear error).
+
+**Files:** `scripts/proxmox/create-technitium-lxc.sh`,
+`docs-zensical/docs/services/technitium-dns-lxc.md`
+
+**Follow-ups:** none new.
+
+---
+
 ## 2026-11-08 — Technitium LXC script: prompt defaults and image picker
 
 **What:** In `scripts/proxmox/create-technitium-lxc.sh`:
