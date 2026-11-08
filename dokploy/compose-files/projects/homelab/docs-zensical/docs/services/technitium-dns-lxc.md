@@ -192,6 +192,41 @@ To replace LXC 108 with a fresh one, keeping its config:
     `dnsSettings=true` also brings back the old `dnsServerDomain`, forwarders
     and blocking settings.
 
+## Clustering
+
+Technitium (v14+) can cluster servers: one **Primary**, the rest **Secondary**.
+Settings, allowed/blocked lists, apps and users sync from the Primary, and zones
+are spread to all nodes through a cluster catalog zone.
+
+| Port | Used for | State after the script |
+|---|---|---|
+| 53443/tcp | HTTPS API between nodes: join, heartbeat, config sync | **Not listening** — HTTPS is off by default. Cluster init/join turns it on with a self-signed certificate |
+| 53/tcp, 53/udp | Zone transfers (AXFR/IXFR) and NOTIFY for the cluster's secondary zones | Open (DNS) |
+| 5380/tcp | Web console over HTTP | Open |
+
+Nothing filters these: the script sets `firewall=0` on the container's NIC (the
+Proxmox firewall doesn't apply), the Debian image has no firewall, and two servers
+on VLAN 10 are on the same subnet, so no MikroTik routing is involved.
+
+To build a cluster (web console → Administration → Cluster):
+
+1. On the server that should be **Primary**: *Initialize*, with a cluster domain
+   (e.g. `dns.home.capilabs.dev` — it **can't be changed later**) and the IP the
+   other nodes reach it on. This creates the cluster zone and the
+   `cluster-catalog` zone.
+2. On each **Secondary**: *Join*, with the Primary's HTTPS URL
+   (`https://<primary-ip>:53443/`), its IP, and a Primary admin login. Tick
+   "ignore certificate errors" only while it uses the self-signed certificate.
+
+!!! warning
+    Joining **overwrites** the Secondary's Allowed, Blocked, Apps, Settings and
+    Administration config with the Primary's. Join fresh servers, or take a
+    backup first.
+
+TODO: decide whether the production server (`192.168.10.2`) and a second one
+should be clustered, and whether to give the web service a real certificate
+first (Technitium's recommendation) instead of the self-signed one.
+
 ## Upgrading Technitium
 
 Re-running the official installer upgrades in place and keeps `/etc/dns`:

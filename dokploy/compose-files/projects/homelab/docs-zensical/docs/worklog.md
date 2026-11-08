@@ -6,6 +6,27 @@ Each entry: what changed, why, files touched, and follow-ups. Keep the detailed
 
 ---
 
+## 2026-11-08 — Technitium clustering ports (documented)
+
+**What:** Checked whether a server built by `create-technitium-lxc.sh` is ready for
+Technitium clustering. Nothing filters the ports (`firewall=0` on the NIC, no firewall
+in the image, same VLAN). The cluster port 53443/tcp (HTTPS API) isn't listening until
+HTTPS is turned on, which cluster init/join does automatically with a self-signed
+certificate. No script change. Added a *Clustering* section (ports, steps, warning that
+joining overwrites the Secondary's config) to
+[Technitium DNS in an LXC](services/technitium-dns-lxc.md#clustering).
+
+**Source:** Technitium `APIDOCS.md` (cluster init / initJoin calls).
+
+**Files:** `docs-zensical/docs/services/technitium-dns-lxc.md`
+
+**Follow-ups:**
+
+- [ ] Decide whether to cluster the production server with a second one, and whether
+  to use a real certificate for the web service first.
+
+---
+
 ## 2026-11-08 — Technitium LXC script: install jq on the node if missing
 
 **What:** `scripts/proxmox/create-technitium-lxc.sh` checks for `jq` on the Proxmox
