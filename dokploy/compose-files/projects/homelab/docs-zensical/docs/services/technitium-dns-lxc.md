@@ -165,64 +165,76 @@ is a Traefik **dynamic file**; the repo copy is
 
 | Name | Goes to | Use it for |
 |---|---|---|
-| `dns.home.capilabs.dev` | **Both** servers, load-balanced | Everyday use — keeps working if one server is down |
-| `dns1.home.capilabs.dev` | `http://192.168.10.2:5380` (LXC 108) | Reaching the production server specifically |
-| `dns2.home.capilabs.dev` | `http://192.168.10.3:5380` (TODO: real IP) | Reaching the second server specifically |
+| `dns.home.capilabs.dev` | The **Primary**; the Secondary only while the Primary is down | Everyday use |
+| `dns1.home.capilabs.dev` | `http://192.168.10.2:5380` — LXC 108, cluster **Primary** | Reaching the Primary specifically |
+| `dns2.home.capilabs.dev` | `http://192.168.10.3:5380` (TODO: real IP) — cluster **Secondary** | Checking the replica |
 
-The shared service:
+```mermaid
+flowchart LR
+    b[Browser] --> t[Traefik<br/>dns.home.capilabs.dev]
+    t -- Primary healthy --> p[dns1 · Primary<br/>192.168.10.2<br/>read/write]
+    t -. Primary down .-> s[dns2 · Secondary<br/>read-only zones]
+    p == cluster sync ==> s
+```
+
+The shared service is a **failover**, not a round-robin load balancer:
 
 ```yaml
 http:
   services:
     technitium-lxc:
+      failover:
+        service: technitium-lxc-1     # Primary
+        fallback: technitium-lxc-2    # Secondary
+    technitium-lxc-1:
       loadBalancer:
-        sticky:
-          cookie:
-            name: technitium_node
-            secure: true
-            httpOnly: true
-            sameSite: lax
         healthCheck:
           path: /
           interval: 10s
           timeout: 3s
         servers:
           - url: "http://192.168.10.2:5380"
+    technitium-lxc-2:
+      loadBalancer:
+        servers:
           - url: "http://192.168.10.3:5380"
 ```
 
-- **Sticky cookie** (`technitium_node`): Technitium login sessions live on one
-  server, so Traefik must keep each browser on the same server. Without it you'd be
-  logged out on every other request.
-- **Health check** (`GET /` every 10 s): a server that stops answering is taken out
-  of the pool. If it was "your" server, Traefik sends you to the other one and you
-  **log in again** there.
-- **Which server am I on?** The console header shows the server's domain
-  (`DNS_SERVER_DOMAIN`), e.g. `dns.home.capilabs.dev` vs `dns2.home.capilabs.dev`.
-  Use `dns1`/`dns2` when a change must go to a specific server.
+- **Why not load-balance both:** `dns2` is a cluster **Secondary** — a replica that
+  can't edit zones. Round-robin (even with a sticky cookie) would land some sessions
+  on it, where zone edits fail.
+- **Health check** (`GET /` every 10 s, on the Primary): it's what lets the failover
+  notice the Primary is down. Without a health check on `technitium-lxc-1`, the
+  failover never switches.
+- **During a failover** you log in again (sessions are per server) and can view
+  zones and logs, but not edit zones until the Primary is back.
+- Needs Traefik v2.6+ (Dokploy ships v3). `failover` works only in the **file**
+  provider, which is what this is. TODO: confirm with `traefik version` on
+  `docker-dev-1`, and check the Traefik dashboard shows the service without errors
+  after applying.
 
-!!! warning "Not clustered = two separate configs"
-    Unless the servers are [clustered](#clustering), each one has its own zones,
-    block lists and settings. A change made through the shared name only lands on
-    whichever server you were sent to. Cluster them (or make changes via
-    `dns1`/`dns2` on both) so the shared name always shows the same thing.
-
-This load-balances only the **web console**. DNS queries (port 53) don't go through
+This covers only the **web console**. DNS queries (port 53) don't go through
 Traefik; clients get redundancy by having both server IPs as DNS servers (DHCP,
-Tailscale split DNS).
+Tailscale split DNS), and both servers answer queries.
 
 The names must resolve to Traefik. If `home.capilabs.dev` has a wildcard
 (`*.home.capilabs.dev` → Traefik) nothing else is needed; otherwise add A records for
 `dns1` and `dns2`. TODO: confirm whether the zone uses a wildcard.
 
-Check (the second command should show `technitium_node` in a `set-cookie` header):
+Test the failover from the LAN:
 
 ```bash
-dig @192.168.10.2 dns.home.capilabs.dev +short
+curl -sI https://dns.home.capilabs.dev | head -1
 ```
 
 ```bash
-curl -sI https://dns.home.capilabs.dev | grep -i -E '^HTTP|set-cookie'
+pct stop 108   # on pvemaster1 - only in a maintenance window, the Primary goes down
+```
+
+Within ~10 s `dns.home.capilabs.dev` should show the Secondary's console. Then:
+
+```bash
+pct start 108
 ```
 
 ## Migrating / rebuilding the production server
@@ -293,9 +305,19 @@ To build a cluster (web console → Administration → Cluster):
     Administration config with the Primary's. Join fresh servers, or take a
     backup first.
 
-TODO: decide whether the production server (`192.168.10.2`) and a second one
-should be clustered, and whether to give the web service a real certificate
-first (Technitium's recommendation) instead of the self-signed one.
+### Current cluster
+
+| Role | Server | Console | Zones |
+|---|---|---|---|
+| **Primary** | LXC 108 on `pvemaster1`, `192.168.10.2` | `dns1.home.capilabs.dev` | Read/write — make every change here |
+| **Secondary** | TODO: CTID, node, IP | `dns2.home.capilabs.dev` | Read-only replica (backup) |
+
+On the Secondary, zones are synced from the Primary and **can't be edited** there.
+That's why the shared console name fails over instead of load-balancing (see
+[Web console through Traefik](#web-console-through-traefik)).
+
+TODO: cluster domain, and whether the web service uses a real certificate or the
+self-signed one the cluster set up.
 
 ## Upgrading Technitium
 

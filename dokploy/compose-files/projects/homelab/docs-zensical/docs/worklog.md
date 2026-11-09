@@ -6,6 +6,31 @@ Each entry: what changed, why, files touched, and follow-ups. Keep the detailed
 
 ---
 
+## 2026-11-09 — Shared console name: failover instead of load balancing
+
+**What:** `dns.home.capilabs.dev` in `dokploy/traefik/dynamic/technitium-lxc.yml` is now a
+Traefik **failover** service: always the Primary (`192.168.10.2`, health check on `/`
+every 10 s), and the Secondary only while the Primary is down. Removed the round-robin
+load balancer and sticky cookie from the entry below. `dns1`/`dns2` direct names kept.
+Recorded the current cluster on the docs page: LXC 108 is **Primary**, `dns2` is a
+**Secondary** (read-only replica).
+
+**Why:** The two servers are clustered and `dns2` is a Secondary, so it can't edit zones.
+Load-balancing would send some sessions there.
+
+**Tested:** YAML parses. Not loaded into a real Traefik (couldn't run Traefik here).
+
+**Files:** `dokploy/traefik/dynamic/technitium-lxc.yml`,
+`docs-zensical/docs/services/technitium-dns-lxc.md`
+
+**Follow-ups:**
+
+- [ ] Apply on `docker-dev-1`, check the Traefik dashboard shows `technitium-lxc` as a failover service without errors.
+- [ ] Fill in the Secondary's CTID / node / IP (placeholder `192.168.10.3`) and the cluster domain.
+- [ ] Test failover in a maintenance window (`pct stop 108`).
+
+---
+
 ## 2026-11-09 — One name for both Technitium consoles (Traefik load balancer)
 
 **What:** `dns.home.capilabs.dev` now load-balances both Technitium consoles in
