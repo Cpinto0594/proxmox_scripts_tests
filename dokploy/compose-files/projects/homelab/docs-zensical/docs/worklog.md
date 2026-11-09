@@ -6,6 +6,30 @@ Each entry: what changed, why, files touched, and follow-ups. Keep the detailed
 
 ---
 
+## 2026-11-09 — One name for both Technitium consoles (Traefik load balancer)
+
+**What:** `dns.home.capilabs.dev` now load-balances both Technitium consoles in
+`dokploy/traefik/dynamic/technitium-lxc.yml`, with a sticky cookie (`technitium_node`,
+because login sessions are per server) and a health check on `/` (failover; you log in
+again on the other server). Direct names `dns1` (→ `192.168.10.2`) and `dns2` (→ second
+server) kept for reaching one server. Replaces the earlier "separate route only" entry
+below. Documented in
+[Web console through Traefik](services/technitium-dns-lxc.md#web-console-through-traefik).
+
+**Note:** only the console is load-balanced; DNS on port 53 isn't behind Traefik.
+Unclustered servers have separate configs, so changes via the shared name hit only one.
+
+**Files:** `dokploy/traefik/dynamic/technitium-lxc.yml`,
+`docs-zensical/docs/services/technitium-dns-lxc.md`
+
+**Follow-ups:**
+
+- [ ] Apply the file on `docker-dev-1` (replaces the current single-server `technitium-lxc` service).
+- [ ] Add A records for `dns1`/`dns2` unless `home.capilabs.dev` has a wildcard.
+- [ ] Decide on clustering so both consoles show the same config.
+
+---
+
 ## 2026-11-09 — Traefik route for the second Technitium console
 
 **What:** Added `dns2.home.capilabs.dev` → `http://192.168.10.3:5380` as its own

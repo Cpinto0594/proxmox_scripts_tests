@@ -3,12 +3,16 @@
 # Traefik -> File System / dynamic, usually /etc/dokploy/traefik/dynamic/).
 # TODO: confirm the exact path/file name on docker-dev-1.
 #
-# One router + service per server, NOT one load balancer with both URLs:
-# Technitium login sessions are per server, so round-robin would log you out.
+#   dns.home.capilabs.dev   -> both servers, load-balanced (sticky + health check)
+#   dns1.home.capilabs.dev  -> 192.168.10.2 only (LXC 108, production)
+#   dns2.home.capilabs.dev  -> second server only
+#
+# Sticky cookie: Technitium login sessions are per server, so a browser must keep
+# hitting the same one. Health check: if that server dies, Traefik moves you to the
+# other (you log in again there).
 # Docs: docs-zensical/docs/services/technitium-dns-lxc.md#web-console-through-traefik
 http:
   routers:
-    # Production server - LXC 108 on pvemaster1
     technitium-lxc-local:
       rule: "Host(`dns.home.capilabs.dev`)"
       entrypoints: [websecure]
@@ -16,7 +20,13 @@ http:
         certResolver: cloudflare
       service: technitium-lxc
 
-    # Second server - created with scripts/proxmox/create-technitium-lxc.sh
+    technitium-lxc-1-local:
+      rule: "Host(`dns1.home.capilabs.dev`)"
+      entrypoints: [websecure]
+      tls:
+        certResolver: cloudflare
+      service: technitium-lxc-1
+
     technitium-lxc-2-local:
       rule: "Host(`dns2.home.capilabs.dev`)"
       entrypoints: [websecure]
@@ -25,7 +35,25 @@ http:
       service: technitium-lxc-2
 
   services:
+    # Shared name: both servers
     technitium-lxc:
+      loadBalancer:
+        sticky:
+          cookie:
+            name: technitium_node
+            secure: true
+            httpOnly: true
+            sameSite: lax
+        healthCheck:
+          path: /
+          interval: 10s
+          timeout: 3s
+        servers:
+          - url: "http://192.168.10.2:5380"
+          - url: "http://192.168.10.3:5380"   # TODO: set to the second server's real IP
+
+    # Direct names: one server each
+    technitium-lxc-1:
       loadBalancer:
         servers:
           - url: "http://192.168.10.2:5380"

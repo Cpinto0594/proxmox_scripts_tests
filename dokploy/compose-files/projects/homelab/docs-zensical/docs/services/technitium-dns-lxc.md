@@ -158,49 +158,71 @@ The DNS defaults match the old Docker setup in
 
 ## Web console through Traefik
 
-Each server's console gets its own HTTPS name on the `websecure` entrypoint, with a
-certificate from the `cloudflare` resolver. The config is a Traefik **dynamic file**
-in Dokploy's Traefik on `docker-dev-1`; the repo copy is
+The consoles are published through Dokploy's Traefik on `docker-dev-1`, on the
+`websecure` entrypoint with certificates from the `cloudflare` resolver. The config
+is a Traefik **dynamic file**; the repo copy is
 `dokploy/traefik/dynamic/technitium-lxc.yml`.
 
-| Name | Server | Backend |
+| Name | Goes to | Use it for |
 |---|---|---|
-| `dns.home.capilabs.dev` | Production, LXC 108 | `http://192.168.10.2:5380` |
-| `dns2.home.capilabs.dev` | Second server (script default `DNS_SERVER_DOMAIN`) | `http://192.168.10.3:5380` (TODO: real IP) |
+| `dns.home.capilabs.dev` | **Both** servers, load-balanced | Everyday use — keeps working if one server is down |
+| `dns1.home.capilabs.dev` | `http://192.168.10.2:5380` (LXC 108) | Reaching the production server specifically |
+| `dns2.home.capilabs.dev` | `http://192.168.10.3:5380` (TODO: real IP) | Reaching the second server specifically |
+
+The shared service:
 
 ```yaml
 http:
-  routers:
-    technitium-lxc-2-local:
-      rule: "Host(`dns2.home.capilabs.dev`)"
-      entrypoints: [websecure]
-      tls:
-        certResolver: cloudflare
-      service: technitium-lxc-2
   services:
-    technitium-lxc-2:
+    technitium-lxc:
       loadBalancer:
+        sticky:
+          cookie:
+            name: technitium_node
+            secure: true
+            httpOnly: true
+            sameSite: lax
+        healthCheck:
+          path: /
+          interval: 10s
+          timeout: 3s
         servers:
+          - url: "http://192.168.10.2:5380"
           - url: "http://192.168.10.3:5380"
 ```
 
-!!! warning "One router per server, not one load balancer"
-    Don't add the second URL under the existing `technitium-lxc` service.
-    Technitium login sessions are per server, so Traefik round-robin would log you
-    out on every other request, and you couldn't tell which server you're editing.
+- **Sticky cookie** (`technitium_node`): Technitium login sessions live on one
+  server, so Traefik must keep each browser on the same server. Without it you'd be
+  logged out on every other request.
+- **Health check** (`GET /` every 10 s): a server that stops answering is taken out
+  of the pool. If it was "your" server, Traefik sends you to the other one and you
+  **log in again** there.
+- **Which server am I on?** The console header shows the server's domain
+  (`DNS_SERVER_DOMAIN`), e.g. `dns.home.capilabs.dev` vs `dns2.home.capilabs.dev`.
+  Use `dns1`/`dns2` when a change must go to a specific server.
 
-The name must also resolve to Traefik. If `home.capilabs.dev` in Technitium has a
-wildcard (`*.home.capilabs.dev` → Traefik) nothing else is needed; otherwise add an
-A record for `dns2` pointing at Traefik. TODO: confirm whether the zone uses a wildcard.
+!!! warning "Not clustered = two separate configs"
+    Unless the servers are [clustered](#clustering), each one has its own zones,
+    block lists and settings. A change made through the shared name only lands on
+    whichever server you were sent to. Cluster them (or make changes via
+    `dns1`/`dns2` on both) so the shared name always shows the same thing.
 
-Check:
+This load-balances only the **web console**. DNS queries (port 53) don't go through
+Traefik; clients get redundancy by having both server IPs as DNS servers (DHCP,
+Tailscale split DNS).
+
+The names must resolve to Traefik. If `home.capilabs.dev` has a wildcard
+(`*.home.capilabs.dev` → Traefik) nothing else is needed; otherwise add A records for
+`dns1` and `dns2`. TODO: confirm whether the zone uses a wildcard.
+
+Check (the second command should show `technitium_node` in a `set-cookie` header):
 
 ```bash
-dig @192.168.10.2 dns2.home.capilabs.dev +short
+dig @192.168.10.2 dns.home.capilabs.dev +short
 ```
 
 ```bash
-curl -sI https://dns2.home.capilabs.dev | head -1
+curl -sI https://dns.home.capilabs.dev | grep -i -E '^HTTP|set-cookie'
 ```
 
 ## Migrating / rebuilding the production server
