@@ -321,13 +321,104 @@ self-signed one the cluster set up.
 
 ## Upgrading Technitium
 
-Re-running the official installer upgrades in place and keeps `/etc/dns`:
+Technitium upgrades in place: re-running the official installer replaces the binaries
+in `/opt/technitium/dns` and **keeps the config in `/etc/dns`** (zones, settings,
+cluster membership).
+
+### 1. Is there an update?
+
+The console shows a banner when one is available. From a shell (API token from
+Administration → Sessions → Create Token; don't commit it):
+
+```bash
+TOKEN="<api token>"
+curl -s -H "Authorization: Bearer $TOKEN" http://192.168.10.2:5380/api/user/checkForUpdate | jq .response
+```
+
+`updateAvailable`, `currentVersion`, `updateVersion` and `changeLogLink` tell you
+what's coming. **Read the changelog** for breaking changes before upgrading,
+especially anything about clustering.
+
+### 2. Order: Secondary first, then Primary
+
+Upgrade the **Secondary** (`dns2`) first, check it, then the **Primary** (LXC 108).
+If the new version misbehaves, the Primary is still on the old version, still
+serving DNS and still accepting zone edits. Keep the gap between the two short so
+the cluster doesn't run mixed versions for long.
+
+TODO: confirm Technitium has no rule about upgrade order for clusters (check the
+changelog / release notes when upgrading).
+
+### 3. Per server
+
+Run on the Proxmox node that hosts the container. Example for the Primary (`108`);
+for the Secondary use its CTID (TODO: fill in).
+
+Snapshot first (instant on `local-lvm`, which is where the containers live):
+
+```bash
+pct snapshot 108 pre-upgrade-$(date +%Y%m%d) --description "before Technitium upgrade"
+```
+
+Upgrade:
 
 ```bash
 pct exec 108 -- bash -c 'curl -sSfL https://download.technitium.com/dns/install.sh | bash'
 ```
 
-Take a Proxmox backup or snapshot first (`vzdump 108 --storage backups_nas --mode snapshot`).
+Check the service, DNS and the version:
+
+```bash
+pct exec 108 -- systemctl is-active dns
+```
+
+```bash
+dig @192.168.10.2 example.com +short
+```
+
+```bash
+dig @192.168.10.2 dns1.home.capilabs.dev +short
+```
+
+Then open the console (`dns1` / `dns2`) and check the version in the footer, and on
+the Primary check Administration → Cluster shows both nodes healthy.
+
+The DNS service restarts during the install, so that server stops answering for a
+few seconds. Clients that have both DNS IPs fall back to the other server.
+
+### 4. Clean up
+
+Once both servers have run fine for a few days, delete the snapshots (they grow as
+the disk changes):
+
+```bash
+pct listsnapshot 108
+```
+
+```bash
+pct delsnapshot 108 pre-upgrade-YYYYMMDD
+```
+
+### Rolling back
+
+If an upgrade breaks a server, roll the container back to its snapshot:
+
+```bash
+pct stop 108
+```
+
+```bash
+pct rollback 108 pre-upgrade-YYYYMMDD
+```
+
+```bash
+pct start 108
+```
+
+!!! warning
+    A rollback also rolls back **config**, not just the version: zone edits made on
+    the Primary after the snapshot are lost. If you rolled back the Primary, check
+    the Secondary resyncs (Administration → Cluster → Resync).
 
 ## Troubleshooting
 

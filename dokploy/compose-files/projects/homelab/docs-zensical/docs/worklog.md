@@ -6,6 +6,24 @@ Each entry: what changed, why, files touched, and follow-ups. Keep the detailed
 
 ---
 
+## 2026-11-09 — Technitium upgrade procedure (documented)
+
+**What:** Expanded *Upgrading Technitium* on
+[Technitium DNS in an LXC](services/technitium-dns-lxc.md#upgrading-technitium) into a
+procedure for the cluster: check for updates (`/api/user/checkForUpdate`), read the
+changelog, upgrade the Secondary first and then the Primary, `pct snapshot` before each,
+re-run the official installer (keeps `/etc/dns`), verify, delete snapshots later, and how
+to roll back (and that a rollback loses later zone edits).
+
+**Files:** `docs-zensical/docs/services/technitium-dns-lxc.md`
+
+**Follow-ups:**
+
+- [ ] Fill in the Secondary's CTID on the page.
+- [ ] On the first real upgrade, check the release notes for any cluster upgrade-order rule.
+
+---
+
 ## 2026-11-09 — Shared console name: failover instead of load balancing
 
 **What:** `dns.home.capilabs.dev` in `dokploy/traefik/dynamic/technitium-lxc.yml` is now a
