@@ -42,7 +42,7 @@ Everything running on the Docker nodes, from `docker ps`, `docker inspect` and `
 
 | Service | Where | Address | Notes |
 |---|---|---|---|
-| Technitium DNS | LXC 108 on `pvemaster1` | `192.168.10.2` | Native install |
+| Technitium DNS | LXC 108 on `pvemaster1` | `192.168.10.2` | Native install — [how to build one](technitium-dns-lxc.md) |
 | Headlamp | Kubernetes | MetalLB IP in `192.168.30.210–250` | Remote access via Tailscale (VLAN 30 route) |
 
 ## Planned

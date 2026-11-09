@@ -1,0 +1,59 @@
+# Traefik dynamic config for the Technitium DNS web consoles (LXC, native install).
+# Lives in Dokploy's Traefik dynamic config dir on docker-dev-1 (Dokploy UI ->
+# Traefik -> File System / dynamic, usually /etc/dokploy/traefik/dynamic/).
+# TODO: confirm the exact path/file name on docker-dev-1.
+#
+#   dns.home.capilabs.dev   -> Primary; fails over to the Secondary only if the Primary is down
+#   dns1.home.capilabs.dev  -> 192.168.10.2 only (LXC 108, cluster Primary)
+#   dns2.home.capilabs.dev  -> second server only (cluster Secondary, read-only zones)
+#
+# Failover (not round-robin): the Secondary can't edit zones. On failover you log in
+# again on the Secondary (sessions are per server) and can view, not edit, zones.
+# Docs: docs-zensical/docs/services/technitium-dns-lxc.md#web-console-through-traefik
+http:
+  routers:
+    technitium-lxc-local:
+      rule: "Host(`dns.home.capilabs.dev`)"
+      entrypoints: [websecure]
+      tls:
+        certResolver: cloudflare
+      service: technitium-lxc
+
+    technitium-lxc-1-local:
+      rule: "Host(`dns1.home.capilabs.dev`)"
+      entrypoints: [websecure]
+      tls:
+        certResolver: cloudflare
+      service: technitium-lxc-1
+
+    technitium-lxc-2-local:
+      rule: "Host(`dns2.home.capilabs.dev`)"
+      entrypoints: [websecure]
+      tls:
+        certResolver: cloudflare
+      service: technitium-lxc-2
+
+  services:
+    # Shared name: always the Primary; the Secondary only while the Primary is down.
+    # Not a round-robin load balancer - the Secondary is a cluster replica and can't
+    # edit zones, so it must never take requests while the Primary is healthy.
+    technitium-lxc:
+      failover:
+        service: technitium-lxc-1
+        fallback: technitium-lxc-2
+
+    # Primary (LXC 108). The health check is what lets the failover above notice it's down.
+    technitium-lxc-1:
+      loadBalancer:
+        healthCheck:
+          path: /
+          interval: 10s
+          timeout: 3s
+        servers:
+          - url: "http://192.168.10.2:5380"
+
+    # Secondary (cluster replica, read-only zones)
+    technitium-lxc-2:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.10.3:5380"   # TODO: set to the second server's real IP

@@ -10,6 +10,8 @@ root.hcl               # root config: local backend + provider generation
 modules/
   vm/                  # clones a VM from an existing template
   lxc/                 # creates an LXC container from a template
+scripts/
+  proxmox/             # run-on-the-node helper scripts (e.g. create-technitium-lxc.sh)
 live/
   vm-example/          # example unit that instantiates modules/vm
   lxc-example/         # example unit that instantiates modules/lxc
