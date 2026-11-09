@@ -1,0 +1,36 @@
+# Traefik dynamic config for the Technitium DNS web consoles (LXC, native install).
+# Lives in Dokploy's Traefik dynamic config dir on docker-dev-1 (Dokploy UI ->
+# Traefik -> File System / dynamic, usually /etc/dokploy/traefik/dynamic/).
+# TODO: confirm the exact path/file name on docker-dev-1.
+#
+# One router + service per server, NOT one load balancer with both URLs:
+# Technitium login sessions are per server, so round-robin would log you out.
+# Docs: docs-zensical/docs/services/technitium-dns-lxc.md#web-console-through-traefik
+http:
+  routers:
+    # Production server - LXC 108 on pvemaster1
+    technitium-lxc-local:
+      rule: "Host(`dns.home.capilabs.dev`)"
+      entrypoints: [websecure]
+      tls:
+        certResolver: cloudflare
+      service: technitium-lxc
+
+    # Second server - created with scripts/proxmox/create-technitium-lxc.sh
+    technitium-lxc-2-local:
+      rule: "Host(`dns2.home.capilabs.dev`)"
+      entrypoints: [websecure]
+      tls:
+        certResolver: cloudflare
+      service: technitium-lxc-2
+
+  services:
+    technitium-lxc:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.10.2:5380"
+
+    technitium-lxc-2:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.10.3:5380"   # TODO: set to the second server's real IP

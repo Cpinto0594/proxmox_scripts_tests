@@ -6,6 +6,29 @@ Each entry: what changed, why, files touched, and follow-ups. Keep the detailed
 
 ---
 
+## 2026-11-09 — Traefik route for the second Technitium console
+
+**What:** Added `dns2.home.capilabs.dev` → `http://192.168.10.3:5380` as its own
+router + service next to the existing `dns.home.capilabs.dev` one, and put the
+Traefik dynamic config in the repo for the first time
+(`dokploy/traefik/dynamic/technitium-lxc.yml`). Documented in
+[Technitium DNS in an LXC → Web console through Traefik](services/technitium-dns-lxc.md#web-console-through-traefik).
+
+**Why separate, not a second URL in the same load balancer:** Technitium sessions are
+per server; round-robin would keep logging you out and hide which server you edit.
+
+**Files:** `dokploy/traefik/dynamic/technitium-lxc.yml`,
+`docs-zensical/docs/services/technitium-dns-lxc.md`
+
+**Follow-ups:**
+
+- [ ] Copy the new router/service into Traefik's dynamic config on `docker-dev-1`.
+- [ ] Set the real IP of the second server (placeholder `192.168.10.3`).
+- [ ] Confirm the dynamic config path on `docker-dev-1` and whether `home.capilabs.dev`
+  has a wildcard record (else add an A record for `dns2`).
+
+---
+
 ## 2026-11-08 — Technitium clustering ports (documented)
 
 **What:** Checked whether a server built by `create-technitium-lxc.sh` is ready for

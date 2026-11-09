@@ -154,6 +154,54 @@ The DNS defaults match the old Docker setup in
    `home.capilabs.dev` zone pointing at Traefik.
 5. To use it as a **second DNS server**, add its IP to DHCP / the clients and
    to Tailscale split DNS (admin console → DNS → `home.capilabs.dev`).
+6. Put its web console behind Traefik — see below.
+
+## Web console through Traefik
+
+Each server's console gets its own HTTPS name on the `websecure` entrypoint, with a
+certificate from the `cloudflare` resolver. The config is a Traefik **dynamic file**
+in Dokploy's Traefik on `docker-dev-1`; the repo copy is
+`dokploy/traefik/dynamic/technitium-lxc.yml`.
+
+| Name | Server | Backend |
+|---|---|---|
+| `dns.home.capilabs.dev` | Production, LXC 108 | `http://192.168.10.2:5380` |
+| `dns2.home.capilabs.dev` | Second server (script default `DNS_SERVER_DOMAIN`) | `http://192.168.10.3:5380` (TODO: real IP) |
+
+```yaml
+http:
+  routers:
+    technitium-lxc-2-local:
+      rule: "Host(`dns2.home.capilabs.dev`)"
+      entrypoints: [websecure]
+      tls:
+        certResolver: cloudflare
+      service: technitium-lxc-2
+  services:
+    technitium-lxc-2:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.10.3:5380"
+```
+
+!!! warning "One router per server, not one load balancer"
+    Don't add the second URL under the existing `technitium-lxc` service.
+    Technitium login sessions are per server, so Traefik round-robin would log you
+    out on every other request, and you couldn't tell which server you're editing.
+
+The name must also resolve to Traefik. If `home.capilabs.dev` in Technitium has a
+wildcard (`*.home.capilabs.dev` → Traefik) nothing else is needed; otherwise add an
+A record for `dns2` pointing at Traefik. TODO: confirm whether the zone uses a wildcard.
+
+Check:
+
+```bash
+dig @192.168.10.2 dns2.home.capilabs.dev +short
+```
+
+```bash
+curl -sI https://dns2.home.capilabs.dev | head -1
+```
 
 ## Migrating / rebuilding the production server
 
