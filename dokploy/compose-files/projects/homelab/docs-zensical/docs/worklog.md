@@ -6,6 +6,69 @@ Each entry: what changed, why, files touched, and follow-ups. Keep the detailed
 
 ---
 
+## 2026-11-14 — Dozzle: `No users.yaml or users.yml file found`
+
+**What:** Dozzle (v11.4.3) exited at startup with `fatal No users.yaml or users.yml file found`.
+The stack uses `DOZZLE_AUTH_PROVIDER=simple`, which needs `/data/users.yml`. `/data` is a local bind
+mount (`/mnt/docker-storage/dozzle`) and the service is `global`, so each node needs its own copy.
+Added a Dozzle page with the generate and install-on-every-node steps, a gotcha about global
+services with bind mounts, a nav entry, and a comment in the compose file.
+
+**Why:** Dozzle replica crash-looping.
+
+**Files:** `dozzle/compose.yml`, `docs-zensical/zensical.toml`, `docs-zensical/docs/services/dozzle.md` (new),
+`docs-zensical/docs/services/README.md`, `docs-zensical/docs/gotchas.md`, `docs-zensical/docs/worklog.md`
+
+**Follow-ups:**
+
+- [ ] Generate `users.yml`, install it on `docker-dev-1` and `docker-worker-1`, force-update the service.
+- [ ] Later: move Dozzle to authentik forward-auth (already in open-items) and drop `users.yml`.
+
+---
+
+## 2026-11-13 — Proxmox OpenID login to authentik fails with TLS alert 40
+
+**What:** Logging in to Proxmox through the new authentik OpenID realm failed with `ureq request
+failed - native-tls: ... ssl/tls alert handshake failure ... SSL alert number 40`. Reproduced: via
+`1.1.1.1`, `authentik.home.capilabs.dev` resolves to Cloudflare (`104.21.11.163`, `172.67.166.108`,
+wildcard under `capilabs.dev`), and a TLS handshake there with that SNI gets alert 40. Cloudflare
+has no certificate for `*.home.capilabs.dev`. Through Technitium the name resolves to Traefik
+(`192.168.40.10`) with a valid Let's Encrypt certificate. So `pveproxy` on the node is resolving
+through a public DNS server, not Technitium. Documented the Proxmox realm setup, the check and the fix.
+
+**Why:** Proxmox SSO via authentik.
+
+**Files:** `docs-zensical/docs/services/authentik.md`, `docs-zensical/docs/gotchas.md`,
+`docs-zensical/docs/worklog.md`
+
+**Follow-ups:**
+
+- [ ] Add `192.168.40.10 authentik.home.capilabs.dev` to `/etc/hosts` on `pvemaster1`, `pvenode1`, `pvenode2`, then retry the login. Chosen over pointing node DNS at Technitium because Technitium (LXC 108) runs on `pvemaster1`, which would be a circular dependency.
+- [ ] TODO: record each node's current `/etc/resolv.conf` in [Proxmox](platforms/proxmox.md).
+
+---
+
+## 2026-11-13 — authentik DB role limited to its own database
+
+**What:** The authentik DB setup only ran `REVOKE ALL ON DATABASE authentik FROM PUBLIC`, which
+keeps other roles out of `authentik` but leaves `authentik` able to connect to every other database
+through the default `PUBLIC` `CONNECT` grant. Added a cluster-wide, re-runnable loop that revokes
+`CONNECT` from `PUBLIC` on all databases, a pre-check query (owners, ACLs, who is connected), and
+verification commands. The role is now created with explicit `NOSUPERUSER NOCREATEDB NOCREATEROLE
+NOREPLICATION NOBYPASSRLS`.
+
+**Why:** Owner wants the `authentik` role to see only the authentik database.
+
+**Files:** `docs-zensical/docs/services/authentik.md`, `docs-zensical/docs/gotchas.md`,
+`docs-zensical/docs/worklog.md`
+
+**Follow-ups:**
+
+- [ ] Run the pre-check, then the revoke loop on the cluster. Re-run the loop whenever a new app DB is added.
+- [ ] Optional: per-role `pg_hba` lines (TODO in the authentik page), after checking where Patroni keeps `pg_hba`.
+
+---
+
 ## 2026-11-13 — Patroni client port is 54321, not 5000
 
 **What:** Connecting to the Patroni VIP on `:5000` failed with `Connection refused`. A probe of

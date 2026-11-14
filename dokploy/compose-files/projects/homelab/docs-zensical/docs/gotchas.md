@@ -10,12 +10,14 @@ Hard-won lessons. Check here before debugging.
 - **Swarm `mode: host` ports have no `host_ip`.** They bind on all interfaces of the node. Use a firewall to restrict.
 - **`swarm init --force-new-cluster` ignores `--advertise-addr`** (known Docker bug). Stale address stays.
 - **Behind Cloudflare Tunnel, no certresolver on the public router.** Cloudflare terminates TLS; use `entrypoints=web`.
+- **Global services with bind mounts need the files on every node.** A bind volume is local to the node, so a config file placed on one node is missing on the other. Dozzle's replica there exited with `fatal No users.yaml or users.yml file found`. Copy the file to each node (see [Dozzle](services/dozzle.md#users-file-usersyml)) or use a Swarm `config`.
 - **Always set `routers.<name>.service=<name>`** explicitly, especially with multiple routers.
 
 ## Postgres
 
 - **`POSTGRES_PASSWORD(_FILE)` only applies at `initdb`.** Reinstall + new secret + old volume = auth failure.
 - **The Patroni VIP's client port is `54321`, not 5000 or 5432.** `192.168.40.120:5432` connects, but it reaches Postgres on whichever node holds the VIP, which may be a read-only replica. Always use `:54321` (HAProxy → current primary). Check the real port in `/etc/haproxy/haproxy.cfg` rather than trusting old notes.
+- **Every role can `CONNECT` to every database by default** (granted to `PUBLIC`). `REVOKE ALL ON DATABASE app FROM PUBLIC` only keeps others out of `app`; it doesn't keep the app role out of the other databases. Revoke `CONNECT` from `PUBLIC` on all databases (loop in [authentik → Keep authentik out of every other database](services/authentik.md#keep-authentik-out-of-every-other-database)).
 - **HAProxy in front of Postgres needs long timeouts.** Ubuntu's `defaults` have `timeout client/server 50000` (50 s) and kill idle pooled connections. Set `timeout client 30m` and `timeout server 30m` in the `listen` block.
 
 ## VMs / disks
@@ -34,5 +36,6 @@ Hard-won lessons. Check here before debugging.
 - **OptiPlex onboard NIC is 1G only**; USB RTL8156 adapters do a real 2.35 Gbit/s.
 - **Client-side VPN can hijack LAN traffic.** A NAS web UI that looked "unreachable" was actually a VPN on the laptop intercepting the traffic. Check this first.
 - **Bridge names must match across Proxmox nodes for migration.** Guests attach to `vmbr1`; a node installed with a differently named bridge (`pvenode2` initially had `vmbr0`) can't receive them. Use `vmbr1` for the USB-adapter bridge on every node.
+- **`*.home.capilabs.dev` also resolves publicly, to Cloudflare.** A host not using Technitium gets Cloudflare's IPs, and Cloudflare has no certificate for that name, so TLS fails with `SSL alert number 40` / `handshake failure` (seen on the Proxmox OpenID realm pointing at authentik). Point the host's DNS at `192.168.10.2`. Test: `getent hosts authentik.home.capilabs.dev` must return `192.168.40.10`. See [authentik → Proxmox VE login](services/authentik.md#proxmox-ve-login-openid-connect-realm).
 - **HDMI switch EDID** breaks the OptiPlex console — use an EDID emulator.
 - **Cloning a Proxmox node's disk to new hardware keeps the old NIC names.** `/etc/network/interfaces` binds `vmbr1` to a MAC-based `enx<mac>` USB adapter name, so the clone has network only because the same adapter moved with it. The onboard NIC is named differently on new hardware (`nic0` became `eno1`), so `vmbr0`'s `bridge-ports` had to be changed to `eno1`. Hostname, IPs and Tailscale state are cloned too: make sure the original machine doesn't come up under the same identity (the old `pvemaster1` was renamed `pvenode2` for this reason).

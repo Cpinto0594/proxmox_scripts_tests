@@ -26,6 +26,7 @@ nav = [
     "services/README.md",
     { "Technitium DNS (LXC)" = "services/technitium-dns-lxc.md" },
     { "authentik (SSO)" = "services/authentik.md" },
+    { "Dozzle (logs)" = "services/dozzle.md" },
   ] },
   { "Gotchas" = "gotchas.md" },
   { "Open items" = "open-items.md" },

@@ -24,7 +24,7 @@ Everything running on the Docker nodes, from `docker ps`, `docker inspect` and `
 | Databasus | `docker-dev-1` | Compose · `homelab-databasus-kd3hwx` | `latest` | `databasus.homelab…`, `databasus.home…` | 9002 | `databasus_data` | Backs up the tenant-os Postgres DBs |
 | Beszel hub | `docker-worker-1` | Swarm · `homelab-beszel-eynrop` | 0.19.0 | `beszel.homelab…`, `beszel.home…` | — | `beszel_hub_data` | Monitoring dashboard |
 | Beszel agents | both nodes | Swarm · `homelab-beszel-eynrop` | 0.19.0 | — | — | `beszel_agent_data`, `…_dev1` | One service per node (`beszel-agent`, `beszel-agent-dev1`) |
-| Dozzle | both nodes (global, 2/2) | Swarm · `homelab-dozzle-8apzz5` | `latest` | `dozzle.homelab…`, `dozzle.home…` | — | `dozzle-data` | Log viewer, swarm mode |
+| [Dozzle](dozzle.md) | both nodes (global, 2/2) | Swarm · `homelab-dozzle-8apzz5` | `latest` | `dozzle.homelab…`, `dozzle.home…` | — | `dozzle-data` | Log viewer, swarm mode |
 | Docs site | `docker-dev-1` | Compose · `homelab-zensical-l9cgdm` | built from repo | `docs.home.capilabs.dev` | — | — | This site. Local only |
 
 ## tenant-os

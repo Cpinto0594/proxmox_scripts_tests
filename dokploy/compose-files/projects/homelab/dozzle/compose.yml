@@ -9,7 +9,7 @@ services:
     environment:
       DOZZLE_MODE: swarm
       DOZZLE_HOSTNAME: homelab-swarm
-      DOZZLE_AUTH_PROVIDER: simple        # reads /data/users.yml
+      DOZZLE_AUTH_PROVIDER: simple        # reads /data/users.yml: must exist on EVERY node, see docs/services/dozzle.md
       DOZZLE_AUTH_TTL: 48h                # session length
       DOZZLE_NO_ANALYTICS: "true"
       DOZZLE_ENABLE_ACTIONS: "false"      # set "true" to allow start/stop/restart from the UI
@@ -70,3 +70,7 @@ networks:
     driver: overlay       # peer-to-peer agent traffic between nodes
   dokploy-network:
     external: true
+
+
+    #docker run --rm amir20/dozzle:latest generate admin \
+    #--password "$DOZZLE_PW" --email you@example.com --name "Admin" > users.yml
