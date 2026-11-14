@@ -1,6 +1,10 @@
 # PostgreSQL HA Cluster: Patroni + etcd + HAProxy + keepalived
 
-Homelab build on 3 Proxmox VMs, VLAN 40. Built for learning, not hardened for production.
+Homelab build on 3 Proxmox VMs, VLAN 40.
+
+**Status (2026-11-13): running, and the main Postgres cluster for the homelab.** Clients connect to
+`192.168.40.120:54321`. It was built as a learning lab and the steps below aren't hardened for
+production (no TLS, `md5` in `pg_hba`). See [open items](../open-items.md).
 
 ---
 
@@ -54,7 +58,7 @@ Floating VIP: `192.168.40.120`
 | 2379 / 2380 | etcd client / peer |
 | 8008 | Patroni REST API (also used by HAProxy health checks) |
 | 5432 | PostgreSQL (replication and direct access) |
-| 5000 | HAProxy listener for clients |
+| 54321 | HAProxy listener for clients |
 | VRRP (IP protocol 112) | keepalived heartbeats between the VMs |
 
 ---
@@ -254,11 +258,17 @@ sudo apt install -y haproxy
 ```
 
 Append to `/etc/haproxy/haproxy.cfg` (identical on all three). **`mode tcp` is required.**
+The live cluster listens on **54321** (verified 2026-11-13 from `haproxy.cfg` on a node and a TCP probe of the VIP).
 
 ```
 listen postgres_primary
-  bind *:5000
+  bind *:54321
   mode tcp
+  option tcplog
+  # Ubuntu's `defaults` set client/server timeouts to 50s, which cuts idle pooled
+  # Postgres connections. Override here.
+  timeout client 30m
+  timeout server 30m
   option httpchk GET /primary
   http-check expect status 200
   default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
@@ -268,7 +278,8 @@ listen postgres_primary
 ```
 
 ```bash
-sudo systemctl restart haproxy
+sudo haproxy -c -f /etc/haproxy/haproxy.cfg && sudo systemctl restart haproxy
+sudo ss -ltnp | grep 54321    # haproxy must be listening
 ```
 
 ### 3.7 keepalived VIP (all three)
@@ -322,7 +333,7 @@ ip addr show ens18   # only one node should show 192.168.40.120
 
 ```bash
 sudo apt install -y postgresql-client-17   # on whatever machine runs psql
-psql -h 192.168.40.120 -p 5000 -U dbadmin -d postgres
+psql -h 192.168.40.120 -p 54321 -U dbadmin -d postgres
 ```
 
 ---
@@ -365,7 +376,7 @@ The VIP should appear on pg2 within a couple of seconds. Also test killing HAPro
 - Don't let the OS Postgres service run; Patroni supervises Postgres itself.
 - `use_pg_rewind` depends on data checksums (or `wal_log_hints`), which the `initdb` block enables.
 - `patronictl list` is safe to run anywhere; it queries etcd, not local Postgres.
-- Postgres binds `0.0.0.0:5432` on each node, which is why HAProxy listens on 5000. To use 5432 on the VIP, restrict Postgres to each node's own IP.
+- Postgres binds `0.0.0.0:5432` on each node, which is why HAProxy listens on a different port (54321 here). To use 5432 on the VIP, restrict Postgres to each node's own IP.
 
 **etcd**
 - etcd is sensitive to CPU starvation and slow fsync. An oversubscribed Proxmox host or contended storage can cause false elections and unexpected Patroni failovers. If you see a promotion you didn't trigger, check `journalctl -u etcd` first.
@@ -386,7 +397,7 @@ The VIP should appear on pg2 within a couple of seconds. Also test killing HAPro
 - Offline migration drops that node briefly, like a reboot. Cluster stays up as long as the other two remain healthy.
 
 **VLAN**
-- Anything outside VLAN 40 (Kubernetes, Dokploy on `192.168.1.x`) needs an inter-VLAN rule on the MikroTik allowing only the DB port (5000) to the VIP, plus an extra `pg_hba` line for that subnet.
+- Anything outside VLAN 40 (Kubernetes, Dokploy on `192.168.1.x`) needs an inter-VLAN rule on the MikroTik allowing only the DB port (54321) to the VIP, plus an extra `pg_hba` line for that subnet.
 
 ---
 
@@ -398,6 +409,8 @@ The VIP should appear on pg2 within a couple of seconds. Also test killing HAPro
 | `received invalid response to SSL negotiation: H` | HAProxy `listen` block missing `mode tcp` | Add `mode tcp`, restart HAProxy |
 | `You must install at least one postgresql-client-<version> package` | No client binaries installed | `sudo apt install -y postgresql-client-17` |
 | Boot hangs on `dev-disk-by-uuid-...device/start running` | Stale UUID in `/etc/fstab` (common on cloned VMs) | `blkid`, fix or comment out the stale fstab line, `mount -a` |
+| `Connection refused` on `192.168.40.120:5000` (VIP and every node), while `:5432` works | HAProxy was configured with `bind *:54321`, not 5000 as an older version of this guide said | Connect on `54321`: `psql -h 192.168.40.120 -p 54321 -U dbadmin -d postgres`. Check the real port with `grep -A2 'listen postgres_primary' /etc/haproxy/haproxy.cfg` |
+| Idle app connections drop with `server closed the connection unexpectedly` after about a minute | Ubuntu's stock `defaults` set `timeout client/server 50000` (50 s), which HAProxy applies to the TCP proxy | Add `timeout client 30m` / `timeout server 30m` to the `listen` block (see 3.6), then `sudo systemctl reload haproxy`. TODO: confirm applied on all three nodes |
 
 ---
 

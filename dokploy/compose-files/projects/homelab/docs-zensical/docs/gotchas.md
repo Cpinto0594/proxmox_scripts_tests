@@ -15,9 +15,12 @@ Hard-won lessons. Check here before debugging.
 ## Postgres
 
 - **`POSTGRES_PASSWORD(_FILE)` only applies at `initdb`.** Reinstall + new secret + old volume = auth failure.
+- **The Patroni VIP's client port is `54321`, not 5000 or 5432.** `192.168.40.120:5432` connects, but it reaches Postgres on whichever node holds the VIP, which may be a read-only replica. Always use `:54321` (HAProxy → current primary). Check the real port in `/etc/haproxy/haproxy.cfg` rather than trusting old notes.
+- **HAProxy in front of Postgres needs long timeouts.** Ubuntu's `defaults` have `timeout client/server 50000` (50 s) and kill idle pooled connections. Set `timeout client 30m` and `timeout server 30m` in the `listen` block.
 
 ## VMs / disks
 
+- **Cloned VMs share SSH host keys.** `pg1`–`pg3` (and so the VIP) all present the same ed25519 host key, so you can't tell nodes apart by key and a MITM wouldn't be noticed. Regenerate per VM: `sudo rm /etc/ssh/ssh_host_* && sudo dpkg-reconfigure openssh-server && sudo systemctl restart ssh`. Do it in the template (or with `cloud-init`) for future clones.
 - **Ubuntu installer under-allocates LVM root.** Check `lsblk` after provisioning any VM.
 
 ## Kubernetes

@@ -43,15 +43,16 @@ Everything running on the Docker nodes, from `docker ps`, `docker inspect` and `
 | Service | Where | Address | Notes |
 |---|---|---|---|
 | Technitium DNS | LXC 108 on `pvemaster1` | `192.168.10.2` | Native install — [how to build one](technitium-dns-lxc.md) |
+| PostgreSQL HA (Patroni + etcd + HAProxy + keepalived) | 3 VMs `pg1`–`pg3` on VLAN 40 (TODO: VM IDs / Proxmox hosts) | VIP `192.168.40.120:54321` (primary) | **Main Postgres cluster** — [build guide](patroni-cluster-guide.md). Used by authentik |
 | Headlamp | Kubernetes | MetalLB IP in `192.168.30.210–250` | Remote access via Tailscale (VLAN 30 route) |
 
 ## Planned
 
 | Service | Where | Notes |
 |---|---|---|
+| authentik | `docker-worker-1`, Dokploy Swarm | SSO / IdP, `authentik.homelab…` / `authentik.home…`. External DB on the Patroni VIP. Compose ready — [page](authentik.md) |
 | Pterodactyl Panel | `docker-worker-1`, Dokploy | MariaDB + Redis, `pterodactyl.homelab.capilabs.dev` |
 | Pterodactyl Wings | VM 110 `wings-gameserver-01` on `pvenode1` (created, stopped), plain Compose | Needs host net, privileged, docker.sock |
-| PostgreSQL HA (Patroni + etcd) | 3 VMs on VLAN 40 | Learning lab; VMs not created yet |
 | MariaDB Galera + MaxScale | 3 VMs | Learning lab, latest stable MariaDB |
 
 ## Retired

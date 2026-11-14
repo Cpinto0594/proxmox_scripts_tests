@@ -51,6 +51,10 @@ All subnets are /24. Pattern: each new node takes the previous node's addresses 
 |---|---|---|
 | `docker-dev-1` | 192.168.40.10 | Swarm manager, Dokploy |
 | `docker-worker-1` | 192.168.40.11 | Swarm worker |
+| `pg1` | 192.168.40.115 | Patroni / Postgres / etcd / HAProxy |
+| `pg2` | 192.168.40.116 | same |
+| `pg3` | 192.168.40.117 | same |
+| Postgres VIP (keepalived) | 192.168.40.120 | Clients use port 54321 (HAProxy → primary) |
 | Galera VMs + MaxScale | TODO | Planned |
 
 ## Tailscale

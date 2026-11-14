@@ -1,0 +1,159 @@
+# ------------------------------------------------------------------
+# authentik — identity provider / SSO, production stack for Docker Swarm (Dokploy)
+# Target: Dokploy Compose app, Compose Type = **Docker Swarm** (set at creation, can't be changed later)
+# Based on the official compose file for 2026.8.5:
+#   https://docs.goauthentik.io/compose.yml
+# Differences from upstream:
+#   - EXTERNAL Postgres (no bundled postgresql service) — default target is the
+#     Patroni cluster VIP via HAProxy (192.168.40.120:54321), set in PG_HOST/PG_PORT.
+#     Create the role + database first (see docs page).
+#   - Swarm: labels under deploy.labels, placement pinned to one node (shared bind volumes)
+#   - no env_file (Swarm stacks resolve ${VAR} from Dokploy's env instead)
+#   - shm_size isn't supported by `docker stack deploy` -> tmpfs mount on /dev/shm
+#   - worker has NO docker.sock and does not run as root (no Docker-managed outposts;
+#     the embedded outpost inside the server still works)
+#   - no Redis: authentik removed it in 2025.10, everything lives in Postgres
+# Docs: docs-zensical/docs/services/authentik.md
+# ------------------------------------------------------------------
+
+services:
+  authentik-server:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.8.5}
+    command: server
+    environment: &authentik-env
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+
+      # --- External database (authentik waits/retries until it's reachable) ---
+      AUTHENTIK_POSTGRESQL__HOST: ${PG_HOST:?external postgres host required}
+      AUTHENTIK_POSTGRESQL__PORT: ${PG_PORT:-54321}
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS:?database password required}
+      AUTHENTIK_POSTGRESQL__SSLMODE: ${PG_SSLMODE:-prefer}
+
+      # --- Email (optional: password recovery, enrollment, notifications) ---
+      AUTHENTIK_EMAIL__HOST: ${EMAIL_HOST:-localhost}
+      AUTHENTIK_EMAIL__PORT: ${EMAIL_PORT:-25}
+      AUTHENTIK_EMAIL__USERNAME: ${EMAIL_USERNAME:-}
+      AUTHENTIK_EMAIL__PASSWORD: ${EMAIL_PASSWORD:-}
+      AUTHENTIK_EMAIL__USE_TLS: ${EMAIL_USE_TLS:-false}
+      AUTHENTIK_EMAIL__USE_SSL: ${EMAIL_USE_SSL:-false}
+      AUTHENTIK_EMAIL__TIMEOUT: 10
+      AUTHENTIK_EMAIL__FROM: ${EMAIL_FROM:-authentik@localhost}
+
+      # --- First-run bootstrap (read only on the very first start; clear afterwards) ---
+      AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL:-}
+      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD:-}
+    volumes:
+      - authentik-data:/data
+      - authentik-templates:/templates
+      - type: tmpfs              # replaces upstream `shm_size: 512mb` (not supported in Swarm)
+        target: /dev/shm
+        tmpfs:
+          size: 536870912
+    networks:
+      - dokploy-network     # Traefik + egress to the external Postgres on VLAN 40
+    healthcheck:
+      test: ["CMD", "ak", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == docker-worker-1   # <-- must match authentik-worker (shared bind volumes)
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        window: 60s
+        # no max_attempts: if the DB is briefly unreachable (e.g. Patroni failover) keep retrying
+      resources:
+        limits:
+          memory: 1024M
+        reservations:
+          memory: 512M
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=dokploy-network
+
+        # Public — reached via Cloudflare Tunnel, which already terminates TLS at the edge.
+        # Traefik's `web` entrypoint sees plain HTTP from cloudflared, so force
+        # X-Forwarded-Proto=https or authentik builds http:// redirect/issuer URLs.
+        - traefik.http.middlewares.authentik-forwarded-https.headers.customrequestheaders.X-Forwarded-Proto=https
+        - traefik.http.routers.authentik-public.rule=Host(`${PUBLIC_DOMAIN}`)
+        - traefik.http.routers.authentik-public.entrypoints=web
+        - traefik.http.routers.authentik-public.middlewares=authentik-forwarded-https
+        - traefik.http.routers.authentik-public.service=authentik
+
+        # Local — reached directly via Technitium, Traefik terminates TLS with the Cloudflare resolver
+        - traefik.http.routers.authentik-local.rule=Host(`${LOCAL_DOMAIN}`)
+        - traefik.http.routers.authentik-local.entrypoints=websecure
+        - traefik.http.routers.authentik-local.tls.certresolver=cloudflare
+        - traefik.http.routers.authentik-local.service=authentik
+
+        - traefik.http.services.authentik.loadbalancer.server.port=9000
+
+  authentik-worker:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.8.5}
+    command: worker
+    environment: *authentik-env
+    volumes:
+      - authentik-data:/data
+      - authentik-certs:/certs
+      - authentik-templates:/templates
+      - type: tmpfs
+        target: /dev/shm
+        tmpfs:
+          size: 536870912
+    networks:
+      - dokploy-network     # external Postgres + outbound (SMTP, LDAP/OAuth sources, blueprints)
+    healthcheck:
+      test: ["CMD", "ak", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == docker-worker-1   # <-- shares the authentik-data bind with the server
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        window: 60s
+      resources:
+        limits:
+          memory: 1024M
+        reservations:
+          memory: 384M
+
+volumes:
+  authentik-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/authentik/data
+  authentik-certs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/authentik/certs
+  authentik-templates:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/authentik/custom-templates
+
+networks:
+  dokploy-network:
+    external: true

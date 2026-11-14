@@ -6,6 +6,73 @@ Each entry: what changed, why, files touched, and follow-ups. Keep the detailed
 
 ---
 
+## 2026-11-13 — Patroni client port is 54321, not 5000
+
+**What:** Connecting to the Patroni VIP on `:5000` failed with `Connection refused`. A probe of
+VLAN 40 showed `:5000` refused on the VIP and all three nodes, while `:5432` was open and Patroni's
+`/primary` returned 200 on `pg1` only (cluster healthy, `pg1` leader). The owner's
+`/etc/haproxy/haproxy.cfg` has `bind *:54321`, and `:54321` is open on the VIP and every node. The
+docs had said 5000 everywhere. Corrected the port across the docs and the authentik stack.
+
+Also found in the same config: Ubuntu's stock `defaults` set `timeout client/server 50000` (50 s),
+which drops idle pooled Postgres connections. The guide now sets 30 min in the `listen` block. All
+three `pg` VMs present the same SSH host key (cloned without regenerating).
+
+**Why:** authentik's DB setup (and every future app) has to use the right port. VIP `:5432` isn't a
+safe fallback because it goes to whichever node holds the VIP, not the Patroni leader.
+
+**Files:** `docs-zensical/docs/services/patroni-cluster-guide.md` (port, HAProxy block with
+timeouts + `tcplog`, config check, two troubleshooting rows), `docs-zensical/docs/services/authentik.md`,
+`docs-zensical/docs/services/README.md`, `docs-zensical/docs/inventory/ip-plan.md`,
+`docs-zensical/docs/gotchas.md`, `docs-zensical/docs/open-items.md`, `docs-zensical/docs/worklog.md`
+(port in the entry below), `authentik/compose.yml` (header comment), `authentik/.env.sample`
+(`PG_PORT=54321`)
+
+**Follow-ups:**
+
+- [ ] Apply the HAProxy timeout/`tcplog` change on `pg1`–`pg3` and reload.
+- [ ] Regenerate SSH host keys on `pg1`–`pg3`.
+- [ ] Set `PG_PORT=54321` in the authentik Dokploy environment.
+- [ ] If anything outside VLAN 40 needs the DB, the MikroTik rule must allow `54321`, not 5000.
+
+---
+
+## 2026-11-13 — authentik compose stack (SSO)
+
+**What:** Added a Swarm-type compose stack for authentik 2026.8.5 at
+`dokploy/compose-files/projects/homelab/authentik/` (`compose.yml` + `.env.sample`):
+`authentik-server` (Traefik public + local routers on `:9000`) and `authentik-worker`, pinned to
+`docker-worker-1` with bind volumes under `/mnt/docker-storage/authentik/`. **External database**:
+no bundled Postgres. `PG_HOST`/`PG_PORT` default to the Patroni VIP `192.168.40.120:54321`, and the
+role/DB are created by hand. New page [authentik](services/authentik.md) with deploy steps.
+
+**Why:** One login for the homelab apps instead of a separate account in each.
+
+**Choices:** External DB because authentik recommends running Postgres separately from its example stack, and the cluster gives HA and shared backups. No Redis (removed upstream in 2025.10). `shm_size` replaced by a tmpfs on `/dev/shm`
+(Swarm ignores `shm_size`). Worker has no `docker.sock` and doesn't run as root. Public router
+forces `X-Forwarded-Proto=https`, since Traefik sees cloudflared's traffic as plain HTTP.
+
+**Also:** The Patroni cluster (`pg1`–`pg3`, VIP `192.168.40.120:54321`) is up and is now the main Postgres cluster (owner confirmed). Moved it from *Planned* to *Outside Docker* in the catalog, added its IPs to the IP plan, and put a status line on the guide.
+
+**Tested:** `docker compose config` passes. Not deployed.
+
+**Files:** `dokploy/compose-files/projects/homelab/authentik/compose.yml`,
+`dokploy/compose-files/projects/homelab/authentik/.env.sample`,
+`docs-zensical/docs/services/authentik.md`, `docs-zensical/docs/services/README.md`,
+`docs-zensical/docs/open-items.md`, `docs-zensical/docs/inventory/ip-plan.md`,
+`docs-zensical/docs/services/patroni-cluster-guide.md`, `docs-zensical/zensical.toml`
+
+**Follow-ups:**
+
+- [ ] Create the `authentik` role + DB on the cluster, check `max_connections`.
+- [ ] Create the dirs on `docker-worker-1`, put the secrets in Infisical, deploy from Dokploy (Swarm type).
+- [ ] Cloudflare tunnel route + Technitium record for the two names.
+- [ ] Confirm the public name gives `https://` issuer/redirect URLs.
+- [ ] Check `docker-worker-1` RAM (6 GB, already runs Forgejo) once it's running.
+- [ ] Add the authentik DB to Databasus.
+
+---
+
 ## 2026-11-09 — Shared console name: failover instead of load balancing
 
 **What:** `dns.home.capilabs.dev` in `dokploy/traefik/dynamic/technitium-lxc.yml` is now a
