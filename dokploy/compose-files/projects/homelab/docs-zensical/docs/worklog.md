@@ -6,6 +6,25 @@ Each entry: what changed, why, files touched, and follow-ups. Keep the detailed
 
 ---
 
+## 2026-11-17 — Added SODOLA managed switch to the inventory
+
+**What:** Documented a new network device: SODOLA SL902-SWTGW218AS managed switch, management
+IP `192.168.1.3` (VLAN 1). Added it to the hardware inventory, the IP plan (infrastructure static
+assignments) and the network layout.
+
+**Why:** New device on the network; keep the inventory complete.
+
+**Files:** `docs-zensical/docs/inventory/hardware.md`, `docs-zensical/docs/inventory/ip-plan.md`,
+`docs-zensical/docs/network/README.md`, `docs-zensical/docs/worklog.md`
+
+**Follow-ups:**
+
+- [ ] Confirm the switch's port layout, role, and the MikroTik port it uplinks to (then update the [switch port map](inventory/hardware.md#switch-port-map)).
+- [ ] Document its VLAN config and connected devices.
+- [ ] Store the admin password in Infisical.
+
+---
+
 ## 2026-11-14 — Dozzle: `No users.yaml or users.yml file found`
 
 **What:** Dozzle (v11.4.3) exited at startup with `fatal No users.yaml or users.yml file found`.

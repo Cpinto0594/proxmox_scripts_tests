@@ -3,6 +3,7 @@
 ## Layout
 
 - **Core:** MikroTik CRS310-8G+2S+IN does switching, VLANs, and inter-VLAN routing. VLAN plan in [ip-plan.md](../inventory/ip-plan.md).
+- **Secondary switch:** SODOLA SL902-SWTGW218AS (managed), management IP `192.168.1.3` on VLAN 1. TODO: document its uplink port on the MikroTik and what hangs off it. See [hardware](../inventory/hardware.md#network).
 - **Proxmox hosts:** each node's USB 2.5G adapter ([write-up](usb-2.5g-adapters.md)) backs `vmbr1`, a VLAN-aware bridge trunking VLANs 10/20/30/40. Management IP and per-VLAN host IPs live on `vmbr1`. `vmbr0`/`nic0` stay configured with no IP as a fallback.
 - TODO: export and commit the MikroTik config (`/export hide-sensitive file=mikrotik`) to a `network/mikrotik.rsc`.
 

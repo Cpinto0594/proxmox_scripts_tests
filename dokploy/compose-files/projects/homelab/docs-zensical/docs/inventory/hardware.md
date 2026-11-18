@@ -27,6 +27,7 @@
 | Device | Details |
 |---|---|
 | MikroTik CRS310-8G+2S+IN | Core switch/router, VLANs + inter-VLAN routing. Replaced a defective TRENDnet TEG-3102WS. |
+| SODOLA SL902-SWTGW218AS | Managed switch, web UI at `192.168.1.3` (VLAN 1). TODO: confirm port layout (believed 8× 2.5G RJ45 + 1× 10G SFP+), its role, which MikroTik port it uplinks to, what's plugged into it, and its VLAN config. Admin password: TODO store in Infisical (e.g. `infisical:/homelab/network/sodola-admin-password`). |
 | Cabling | Cat5e — confirmed sufficient for 2.5G |
 | Workstation | Realtek 2.5GbE NIC |
 

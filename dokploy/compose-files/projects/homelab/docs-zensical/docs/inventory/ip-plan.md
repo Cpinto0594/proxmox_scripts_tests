@@ -33,6 +33,7 @@ All subnets are /24. Pattern: each new node takes the previous node's addresses 
 
 | Name | IP | Notes |
 |---|---|---|
+| SODOLA SL902-SWTGW218AS | 192.168.1.3 | Managed switch, web UI. TODO: confirm static vs DHCP reservation |
 | Technitium DNS | 192.168.10.2 | LXC 108 on `pvemaster1` |
 | DXP2800 (UGOS) | 192.168.20.2 | NFS |
 
