@@ -57,6 +57,7 @@ Source: `pvesh get /cluster/resources --type vm` plus each guest's config. vCPU 
 | 104 | `docker.dev.1` | `docker-dev-1` | VM | `pvemaster1` | 6 | 8 GB | 150 GB | 40 | 192.168.40.10 | yes |
 | 107 | `docker.worker.1` | `docker-worker-1` | VM | `pvenode1` | 6 | 6 GB | 100 GB | 40 | 192.168.40.11 | yes |
 | 108 | `technitium-dns` | — | LXC | `pvemaster1` | 1 | 0.5 GB | 10 GB | 10 | 192.168.10.2 | yes |
+| TODO | TODO (`technitium-dns-2`?) | TODO | LXC | TODO | TODO | TODO | TODO | 10 | 192.168.10.3 | TODO |
 
 ### Stopped
 

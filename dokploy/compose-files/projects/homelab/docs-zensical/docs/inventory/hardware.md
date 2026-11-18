@@ -26,7 +26,7 @@
 
 | Device | Details |
 |---|---|
-| MikroTik CRS310-8G+2S+IN | Core switch/router, VLANs + inter-VLAN routing. Replaced a defective TRENDnet TEG-3102WS. |
+| MikroTik CRS310-8G+2S+IN | Core switch/router, VLANs + inter-VLAN routing. Management IP `192.168.1.2` (VLAN 1). Replaced a defective TRENDnet TEG-3102WS. Admin password: TODO store in Infisical (e.g. `infisical:/homelab/network/mikrotik-admin-password`). |
 | SODOLA SL902-SWTGW218AS | Managed switch, web UI at `192.168.1.3` (VLAN 1). TODO: confirm port layout (believed 8× 2.5G RJ45 + 1× 10G SFP+), its role, which MikroTik port it uplinks to, what's plugged into it, and its VLAN config. Admin password: TODO store in Infisical (e.g. `infisical:/homelab/network/sodola-admin-password`). |
 | Cabling | Cat5e — confirmed sufficient for 2.5G |
 | Workstation | Realtek 2.5GbE NIC |
@@ -58,7 +58,7 @@ Source: `/interface bridge port print` and `/interface bridge vlan print` (check
 | ether6–8 | Unused (defconf) | 1 | — | — | Down |
 | sfp-sfpplus1–2 | Unused (defconf) | 1 | — | — | Down |
 
-The bridge itself is tagged on VLANs 10, 20, 30, and 40, so the switch has an L3 interface on each.
+The bridge itself is tagged on VLANs 10, 20, 30, and 40, so the switch has an L3 interface on each: `vlan-10`–`vlan-40` with `192.168.10.1`–`192.168.40.1`, the gateways for those VLANs. Management is `192.168.1.2` on `bridge` (VLAN 1). Full list in the [IP plan](ip-plan.md#vlans).
 
 `pvemaster1`, `pvenode1` and `pvenode2` are on `ether2`, `ether3` and `ether4`. `ether4` is already in the VLAN table exactly like `ether2`/`ether3` (VLAN 1 untagged, VLANs 10–40 tagged). For reference, the commands that set this up:
 

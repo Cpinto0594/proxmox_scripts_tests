@@ -6,13 +6,54 @@ Each entry: what changed, why, files touched, and follow-ups. Keep the detailed
 
 ---
 
-## 2026-11-17 — Added SODOLA managed switch to the inventory
+## 2026-11-17 — MikroTik addresses and VLAN gateways
+
+**What:** Filled in the VLAN 10–40 gateways in the IP plan from `/ip address print` on the
+MikroTik: `192.168.10.1`, `.20.1`, `.30.1`, `.40.1` on `vlan-10`–`vlan-40`. `192.168.1.2` is a
+static address on `bridge`, used only for management; VLAN 1's gateway stays the home router
+(`192.168.1.1`). Added the full address table to the IP plan and a pointer from the switch port map.
+
+**Why:** The gateways were `TODO` in the IP plan.
+
+**Files:** `docs-zensical/docs/inventory/ip-plan.md`, `docs-zensical/docs/inventory/hardware.md`,
+`docs-zensical/docs/worklog.md`
+
+**Follow-ups:**
+
+- [ ] The switch labels VLAN 10 `MNT`, the docs call it `MGMT`. Pick one.
+
+---
+
+## 2026-11-17 — Second Technitium DNS server (Secondary) in the inventory
+
+**What:** Recorded the Technitium cluster Secondary at `192.168.10.3`. Checked from the
+workstation: it answers DNS and serves the web console on :5380, same as the Primary. Added it to
+the IP plan, the Proxmox guest table (placeholder row), the network DNS section and the
+Technitium page (current cluster, console table), and removed the "TODO: real IP" notes there.
+Couldn't read the CTID / node: SSH to the nodes was refused (no key) and `pvenode2` timed out.
+
+**Why:** The Secondary was running but its address wasn't documented.
+
+**Files:** `docs-zensical/docs/inventory/ip-plan.md`, `docs-zensical/docs/platforms/proxmox.md`,
+`docs-zensical/docs/network/README.md`, `docs-zensical/docs/services/technitium-dns-lxc.md`,
+`docs-zensical/docs/worklog.md`
+
+**Follow-ups:**
+
+- [ ] Fill in the Secondary's CTID, node and resources (`pct list` on each node).
+- [ ] Remove the `# TODO: set to the second server's real IP` comment in `dokploy/traefik/dynamic/technitium-lxc.yml` (the IP is right).
+- [ ] Add `192.168.10.3` as the second resolver in DHCP and Tailscale split DNS, if not already.
+
+---
+
+## 2026-11-17 — Network device IPs: SODOLA switch and MikroTik
 
 **What:** Documented a new network device: SODOLA SL902-SWTGW218AS managed switch, management
-IP `192.168.1.3` (VLAN 1). Added it to the hardware inventory, the IP plan (infrastructure static
+IP `192.168.1.3` (VLAN 1). Also recorded the MikroTik CRS310-8G+2S+IN management IP,
+`192.168.1.2` (VLAN 1). Added both to the hardware inventory, the IP plan (infrastructure static
 assignments) and the network layout.
 
-**Why:** New device on the network; keep the inventory complete.
+**Why:** Keep the inventory complete; the network devices' management IPs weren't written down.
 
 **Files:** `docs-zensical/docs/inventory/hardware.md`, `docs-zensical/docs/inventory/ip-plan.md`,
 `docs-zensical/docs/network/README.md`, `docs-zensical/docs/worklog.md`
@@ -21,7 +62,8 @@ assignments) and the network layout.
 
 - [ ] Confirm the switch's port layout, role, and the MikroTik port it uplinks to (then update the [switch port map](inventory/hardware.md#switch-port-map)).
 - [ ] Document its VLAN config and connected devices.
-- [ ] Store the admin password in Infisical.
+- [ ] Store the SODOLA and MikroTik admin passwords in Infisical.
+- [x] Record the MikroTik's IPs on VLANs 10–40 and fill the gateway `TODO`s in the IP plan (done, see the entry above).
 
 ---
 

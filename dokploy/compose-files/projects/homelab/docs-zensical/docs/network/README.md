@@ -2,7 +2,7 @@
 
 ## Layout
 
-- **Core:** MikroTik CRS310-8G+2S+IN does switching, VLANs, and inter-VLAN routing. VLAN plan in [ip-plan.md](../inventory/ip-plan.md).
+- **Core:** MikroTik CRS310-8G+2S+IN (management IP `192.168.1.2`) does switching, VLANs, and inter-VLAN routing. VLAN plan in [ip-plan.md](../inventory/ip-plan.md).
 - **Secondary switch:** SODOLA SL902-SWTGW218AS (managed), management IP `192.168.1.3` on VLAN 1. TODO: document its uplink port on the MikroTik and what hangs off it. See [hardware](../inventory/hardware.md#network).
 - **Proxmox hosts:** each node's USB 2.5G adapter ([write-up](usb-2.5g-adapters.md)) backs `vmbr1`, a VLAN-aware bridge trunking VLANs 10/20/30/40. Management IP and per-VLAN host IPs live on `vmbr1`. `vmbr0`/`nic0` stay configured with no IP as a fallback.
 - TODO: export and commit the MikroTik config (`/export hide-sensitive file=mikrotik`) to a `network/mikrotik.rsc`.
@@ -46,8 +46,9 @@ How Docker apps and Kubernetes are reached from outside the house:
 
 ## DNS
 
-- Technitium DNS Server at `192.168.10.2`.
-- Runs natively in LXC 108 on `pvemaster1` (moved off Docker Compose on `docker-dev-1`), so DNS doesn't depend on the Swarm stack.
+- Technitium DNS Server, two-node cluster: **Primary** `192.168.10.2` (read/write) and **Secondary** `192.168.10.3` (read-only replica). See [current cluster](../services/technitium-dns-lxc.md#current-cluster).
+- TODO: confirm DHCP and Tailscale split DNS hand out `192.168.10.3` as the second resolver (split DNS lists only `192.168.10.2` below).
+- The Primary runs natively in LXC 108 on `pvemaster1` (moved off Docker Compose on `docker-dev-1`), so DNS doesn't depend on the Swarm stack.
 - Build / rebuild / migrate: [Technitium DNS in an LXC](../services/technitium-dns-lxc.md) (script: `scripts/proxmox/create-technitium-lxc.sh`).
 - TODO: list zones, conditional forwarders, upstream resolvers, and DHCP DNS settings.
 

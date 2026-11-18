@@ -5,12 +5,29 @@
 | VLAN | Subnet | Purpose | Gateway |
 |---|---|---|---|
 | 1 | 192.168.1.0/24 | DEFAULT — main LAN, Proxmox host IPs, home router uplink | 192.168.1.1 |
-| 10 | 192.168.10.0/24 | MGMT — infra services (DNS) | TODO |
-| 20 | 192.168.20.0/24 | NAS — storage | TODO |
-| 30 | 192.168.30.0/24 | K8S — Kubernetes | TODO |
-| 40 | 192.168.40.0/24 | APPS — Docker / Dokploy, DB clusters | TODO |
+| 10 | 192.168.10.0/24 | MGMT — infra services (DNS) | 192.168.10.1 (MikroTik `vlan-10`) |
+| 20 | 192.168.20.0/24 | NAS — storage | 192.168.20.1 (MikroTik `vlan-20`) |
+| 30 | 192.168.30.0/24 | K8S — Kubernetes | 192.168.30.1 (MikroTik `vlan-30`) |
+| 40 | 192.168.40.0/24 | APPS — Docker / Dokploy, DB clusters | 192.168.40.1 (MikroTik `vlan-40`) |
 
 Inter-VLAN routing is on the MikroTik (confirmed working at least between VLAN 1 and VLAN 10).
+On VLAN 1 the MikroTik is not the gateway: it has `192.168.1.2` on `bridge` for management only, and
+the home router at `192.168.1.1` is the gateway.
+
+MikroTik addresses, from `/ip address print` (2026-11-17), all static:
+
+| Address | Interface | Comment on the switch |
+|---|---|---|
+| 192.168.1.2/24 | `bridge` | Switch mgmt on existing LAN |
+| 192.168.10.1/24 | `vlan-10` | VLAN-10 - MNT |
+| 192.168.20.1/24 | `vlan-20` | VLAN-20 - NAS |
+| 192.168.30.1/24 | `vlan-30` | VLAN-30 - K8S |
+| 192.168.40.1/24 | `vlan-40` | VLAN40 - APPS |
+
+```bash
+# on the MikroTik
+/ip address print
+```
 
 ## Static assignments
 
@@ -33,8 +50,10 @@ All subnets are /24. Pattern: each new node takes the previous node's addresses 
 
 | Name | IP | Notes |
 |---|---|---|
+| MikroTik CRS310-8G+2S+IN | 192.168.1.2 | Core switch/router, management (WebFig/Winbox/SSH). Static, on `bridge`. Also the gateway (`.1`) on VLANs 10–40, see [VLANs](#vlans) |
 | SODOLA SL902-SWTGW218AS | 192.168.1.3 | Managed switch, web UI. TODO: confirm static vs DHCP reservation |
-| Technitium DNS | 192.168.10.2 | LXC 108 on `pvemaster1` |
+| Technitium DNS (Primary) | 192.168.10.2 | LXC 108 on `pvemaster1`, `dns1.home.capilabs.dev` |
+| Technitium DNS (Secondary) | 192.168.10.3 | Cluster replica, `dns2.home.capilabs.dev`. Answers DNS and serves the console on :5380 (checked 2026-11-17). TODO: CTID and node |
 | DXP2800 (UGOS) | 192.168.20.2 | NFS |
 
 ### Kubernetes (VLAN 30)

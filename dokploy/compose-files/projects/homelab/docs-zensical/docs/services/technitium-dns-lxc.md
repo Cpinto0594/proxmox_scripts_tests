@@ -167,7 +167,7 @@ is a Traefik **dynamic file**; the repo copy is
 |---|---|---|
 | `dns.home.capilabs.dev` | The **Primary**; the Secondary only while the Primary is down | Everyday use |
 | `dns1.home.capilabs.dev` | `http://192.168.10.2:5380` — LXC 108, cluster **Primary** | Reaching the Primary specifically |
-| `dns2.home.capilabs.dev` | `http://192.168.10.3:5380` (TODO: real IP) — cluster **Secondary** | Checking the replica |
+| `dns2.home.capilabs.dev` | `http://192.168.10.3:5380` — cluster **Secondary** | Checking the replica |
 
 ```mermaid
 flowchart LR
@@ -310,7 +310,13 @@ To build a cluster (web console → Administration → Cluster):
 | Role | Server | Console | Zones |
 |---|---|---|---|
 | **Primary** | LXC 108 on `pvemaster1`, `192.168.10.2` | `dns1.home.capilabs.dev` | Read/write — make every change here |
-| **Secondary** | TODO: CTID, node, IP | `dns2.home.capilabs.dev` | Read-only replica (backup) |
+| **Secondary** | `192.168.10.3` (TODO: CTID, node) | `dns2.home.capilabs.dev` | Read-only replica (backup) |
+
+Check both servers answer (should print the same address from each):
+
+```bash
+for ip in 192.168.10.2 192.168.10.3; do nslookup dns2.home.capilabs.dev $ip | tail -2; done
+```
 
 On the Secondary, zones are synced from the Primary and **can't be edited** there.
 That's why the shared console name fails over instead of load-balancing (see
