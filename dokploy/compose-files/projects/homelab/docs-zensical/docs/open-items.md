@@ -16,7 +16,8 @@
 - [ ] Patroni HAProxy: add `option tcplog`, `timeout client 30m`, `timeout server 30m` to `listen postgres_primary` on `pg1`–`pg3` (stock 50 s timeouts drop idle connections). See [guide 3.6](services/patroni-cluster-guide.md#36-haproxy-all-three).
 - [ ] Regenerate SSH host keys on `pg1`–`pg3`: all three share one key (cloned VMs). See [gotchas](gotchas.md#vms-disks).
 - [ ] Patroni cluster is now the main Postgres: review hardening (TLS, `scram-sha-256` in `pg_hba`, Databasus backups of each app DB, monitoring). TODO: check what is already done.
-- [ ] Move Forgejo / Portainer / Beszel logins to [authentik](services/authentik.md) SSO (OIDC where the app supports it, otherwise [forward auth](services/authentik-forward-auth.md)). Dozzle is done.
+- [ ] Move Forgejo / Portainer logins to [authentik](services/authentik.md) SSO (OIDC where the app supports it, otherwise [forward auth](services/authentik-forward-auth.md)). Dozzle is done; Beszel is set up (below).
+- [ ] Beszel OIDC: confirm login on the public and local URLs, record the scope-mapping option and authentik hostnames used, then set `DISABLE_PASSWORD_AUTH=true`. See [Beszel](services/beszel.md#authentication-authentik-oidc).
 - [ ] Dozzle SSO: confirm the public provider/login (`dozzle.homelab.capilabs.dev`), bind an admin group to the Dozzle applications, delete the old `users.yml` on both nodes. See [Dozzle](services/dozzle.md#authentication-authentik-sso).
 - [ ] MariaDB Galera ×3 + MaxScale.
 - [ ] UPS automated shutdown.

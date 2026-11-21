@@ -6,6 +6,30 @@ Each entry: what changed, why, files touched, and follow-ups. Keep the detailed
 
 ---
 
+## 2026-11-20 — Beszel login through authentik OIDC (docs)
+
+**What:** Documented the Beszel ↔ authentik OpenID Connect setup on a new [Beszel](services/beszel.md)
+page: the custom `email` scope mapping that sends `email_verified: true`, the OAuth2/OpenID
+provider and application, the OpenID Connect provider in PocketBase (`/_/`), user creation
+(`USER_CREATION=true`, already in `compose.yml`) and `DISABLE_PASSWORD_AUTH`, plus checks. Added
+notes for this homelab: register a redirect URI for both Beszel hostnames, and use the public
+authentik host for the Auth URL (and for the token/userinfo URLs unless `docker-worker-1`
+resolves through Technitium).
+
+**Why:** Part of moving app logins to authentik. authentik 2025.10+ sends `email_verified: false`
+by default, which Beszel rejects, so the setup has a non-obvious step.
+
+**Files:** `docs-zensical/docs/services/beszel.md` (new), `docs-zensical/zensical.toml`,
+`docs-zensical/docs/services/README.md`, `docs-zensical/docs/services/authentik.md`,
+`docs-zensical/docs/gotchas.md`, `docs-zensical/docs/open-items.md`,
+`docs-zensical/docs/worklog.md`
+
+**Follow-ups:** confirm login on both URLs, record the scope-mapping option and authentik
+hostnames used, store the client secret in Infisical, then set `DISABLE_PASSWORD_AUTH=true`
+(see [open items](open-items.md)).
+
+---
+
 ## 2026-11-21 — Dozzle login through authentik forward auth
 
 **What:** Replaced Dozzle's `simple` auth (`users.yml` on each node) with authentik SSO. Traefik

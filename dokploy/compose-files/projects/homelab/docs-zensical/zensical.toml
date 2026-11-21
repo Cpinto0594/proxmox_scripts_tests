@@ -28,6 +28,7 @@ nav = [
     { "authentik (SSO)" = "services/authentik.md" },
     { "authentik forward auth" = "services/authentik-forward-auth.md" },
     { "Dozzle (logs)" = "services/dozzle.md" },
+    { "Beszel (monitoring)" = "services/beszel.md" },
   ] },
   { "Gotchas" = "gotchas.md" },
   { "Open items" = "open-items.md" },

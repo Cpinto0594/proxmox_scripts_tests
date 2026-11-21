@@ -226,6 +226,11 @@ terminates TLS in Traefik, so it already sends `https`. TODO: confirm after the 
 Apps with no OIDC/SAML of their own (Dozzle so far) are protected by Traefik forward auth through
 the embedded outpost. See [authentik forward auth](authentik-forward-auth.md).
 
+## Apps using authentik OIDC
+
+- [Beszel](beszel.md#authentication-authentik-oidc): OAuth2/OpenID provider plus a custom `email` scope mapping that sends `email_verified: true`.
+- Proxmox VE: see below.
+
 ## Proxmox VE login (OpenID Connect realm)
 
 Proxmox logs in with an OAuth2/OpenID provider + application in authentik and an **OpenID Connect**
