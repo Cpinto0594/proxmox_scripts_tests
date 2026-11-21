@@ -119,6 +119,10 @@ services:
       FORGEJO__service__DISABLE_REGISTRATION: "true"   # flip to false if you want public signup
       FORGEJO__service__REQUIRE_SIGNIN_VIEW: "false"
 
+      # --- OAuth2 / SSO (optional) ---
+      FORGEJO__oauth2_client__ENABLE: true
+      FORGEJO__oauth2_client__ENABLE_AUTO_REGISTRATION: true
+
     volumes:
       - forgejo-data:/data
       - /etc/timezone:/etc/timezone:ro
