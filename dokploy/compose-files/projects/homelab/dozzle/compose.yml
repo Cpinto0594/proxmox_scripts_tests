@@ -9,11 +9,16 @@ services:
     environment:
       DOZZLE_MODE: swarm
       DOZZLE_HOSTNAME: homelab-swarm
-      DOZZLE_AUTH_PROVIDER: simple        # reads /data/users.yml: must exist on EVERY node, see docs/services/dozzle.md
+      #DOZZLE_AUTH_PROVIDER: simple        # reads /data/users.yml: must exist on EVERY node, see docs/services/dozzle.md
       DOZZLE_AUTH_TTL: 48h                # session length
       DOZZLE_NO_ANALYTICS: "true"
       DOZZLE_ENABLE_ACTIONS: "false"      # set "true" to allow start/stop/restart from the UI
       DOZZLE_LEVEL: info
+      DOZZLE_AUTH_PROVIDER: forward-proxy
+      DOZZLE_AUTH_HEADER_USER: X-Authentik-Username
+      DOZZLE_AUTH_HEADER_EMAIL: X-Authentik-Email
+      DOZZLE_AUTH_HEADER_NAME: X-Authentik-Name
+      DOZZLE_AUTH_LOGOUT_URL: https://dozzle.home.capilabs.dev/outpost.goauthentik.io/sign_out
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - dozzle-data:/data

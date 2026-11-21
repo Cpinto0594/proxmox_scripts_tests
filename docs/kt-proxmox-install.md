@@ -121,7 +121,7 @@ sudo systemctl restart containerd
 ls /var/run/containerd/containerd.sock
 ```
 
-### Final config
+### Final config DONT run these in the worker node
 ```bash
 
 ip route show
@@ -131,7 +131,7 @@ sudo kubeadm init \
 
 #Pick the join command to add the worker nodes to this controller
 
-#DONT run these in the worker node
+
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
