@@ -48,6 +48,7 @@ services:
         - traefik.http.routers.dozzle-public.rule=Host(`${PUBLIC_DOMAIN}`)
         - traefik.http.routers.dozzle-public.entrypoints=web
         - traefik.http.routers.dozzle-public.service=dozzle
+        - traefik.http.routers.dozzle-public.middlewares=authentik@file
 
         # Local: Technitium -> Traefik directly
         - traefik.http.routers.dozzle-local.rule=Host(`${LOCAL_DOMAIN}`)
@@ -61,6 +62,7 @@ services:
         - traefik.http.services.dozzle.loadbalancer.sticky.cookie.httponly=true
 
         - traefik.http.services.dozzle.loadbalancer.server.port=8080
+
 
 volumes:
   dozzle-data:
