@@ -45,23 +45,33 @@ services:
         - traefik.docker.network=dokploy-network
 
         # Public: Cloudflare Tunnel -> Traefik (TLS terminated at Cloudflare)
+        - traefik.http.routers.dozzle-public.rule=Host(`${PUBLIC_DOMAIN}`)
+        - traefik.http.routers.dozzle-public.entrypoints=web
+        - traefik.http.routers.dozzle-public.service=dozzle
+        - traefik.http.routers.dozzle-public.middlewares=forwarded-https@file,authentik@file
+
+        # Local: Technitium -> Traefik directly
+        - traefik.http.routers.dozzle-local.rule=Host(`${LOCAL_DOMAIN}`)
+        - traefik.http.routers.dozzle-local.entrypoints=websecure
+        - traefik.http.routers.dozzle-local.tls.certresolver=cloudflare
+        - traefik.http.routers.dozzle-local.service=dozzle
+        - traefik.http.routers.dozzle-local.middlewares=authentik@file
+
         # Outpost callback / sign_out on Dozzle's own hostnames -> authentik
         - traefik.http.routers.dozzle-outpost-public.rule=Host(`${PUBLIC_DOMAIN}`) && PathPrefix(`/outpost.goauthentik.io/`)
         - traefik.http.routers.dozzle-outpost-public.entrypoints=web
         - traefik.http.routers.dozzle-outpost-public.middlewares=forwarded-https@file
         - traefik.http.routers.dozzle-outpost-public.service=authentik-outpost@file
-        
-        # Local: Technitium -> Traefik directly
+
         - traefik.http.routers.dozzle-outpost-local.rule=Host(`${LOCAL_DOMAIN}`) && PathPrefix(`/outpost.goauthentik.io/`)
         - traefik.http.routers.dozzle-outpost-local.entrypoints=websecure
         - traefik.http.routers.dozzle-outpost-local.tls.certresolver=cloudflare
         - traefik.http.routers.dozzle-outpost-local.service=authentik-outpost@file
 
-        # Sticky session config for load balancing (Traefik 2.x)
+        # Sticky session config for load balancing
         - traefik.http.services.dozzle.loadbalancer.sticky.cookie=true
         - traefik.http.services.dozzle.loadbalancer.sticky.cookie.name=dozzle_lb
         - traefik.http.services.dozzle.loadbalancer.sticky.cookie.httponly=true
-
         - traefik.http.services.dozzle.loadbalancer.server.port=8080
 
 volumes:
