@@ -9,53 +9,56 @@ Real-time log viewer for every container in the Swarm.
 | Mode | `global`: one replica per Swarm node (`docker-dev-1`, `docker-worker-1`), peering over the `dozzle` overlay |
 | URLs | `https://dozzle.homelab.capilabs.dev` (public, tunnel), `https://dozzle.home.capilabs.dev` (local) |
 | Data | bind `/mnt/docker-storage/dozzle` → `/data`, **on each node separately** |
-| Auth | `DOZZLE_AUTH_PROVIDER=simple`: users in `/data/users.yml` |
+| Auth | authentik SSO: [forward auth](authentik-forward-auth.md) + `DOZZLE_AUTH_PROVIDER=forward-proxy` |
 
-## Users file (`users.yml`)
+## Authentication (authentik SSO)
 
-The `simple` auth provider reads `/data/users.yml` and the container exits at startup without it:
+Traefik sends every request through authentik's embedded outpost (`authentik@file`). Dozzle takes
+the user from the headers authentik adds. The full pattern, the shared Traefik file and the checks
+are on [authentik forward auth](authentik-forward-auth.md).
 
-```text
-fatal No users.yaml or users.yml file found. | version=v11.4.3
+Dozzle environment:
+
+```yaml
+      DOZZLE_AUTH_PROVIDER: forward-proxy
+      DOZZLE_AUTH_HEADER_USER: X-Authentik-Username
+      DOZZLE_AUTH_HEADER_EMAIL: X-Authentik-Email
+      DOZZLE_AUTH_HEADER_NAME: X-Authentik-Name
+      DOZZLE_AUTH_LOGOUT_URL: https://dozzle.home.capilabs.dev/outpost.goauthentik.io/sign_out
 ```
 
-`/data` is a **local bind mount** and the service is **global**, so every node needs its own copy
-of the file. If it exists on only one node, the replica on the other node crash-loops with the
-error above.
+Traefik routers (labels in `compose.yml`):
 
-Generate the file once. It holds a bcrypt hash, not the password, but keep it out of the repo
-anyway. Store the password at `infisical:/homelab/dozzle/admin-password`.
+| Router | Rule | Entrypoint | Middlewares | Service |
+|---|---|---|---|---|
+| `dozzle-public` | `Host(dozzle.homelab.capilabs.dev)` | `web` | `forwarded-https@file`, `authentik@file` | `dozzle` |
+| `dozzle-local` | `Host(dozzle.home.capilabs.dev)` | `websecure` | `authentik@file` | `dozzle` |
+| `dozzle-outpost-public` | same host + `PathPrefix(/outpost.goauthentik.io/)` | `web` | `forwarded-https@file` | `authentik-outpost@file` |
+| `dozzle-outpost-local` | same host + `PathPrefix(/outpost.goauthentik.io/)` | `websecure` | — | `authentik-outpost@file` |
 
-```bash
-read -rsp 'Dozzle admin password: ' DOZZLE_PW; echo
-docker run --rm amir20/dozzle:latest generate admin \
-  --password "$DOZZLE_PW" --email you@example.com --name "Admin" > users.yml
-unset DOZZLE_PW
-cat users.yml   # expect: users: / admin: / name, email, password: $2a$...
-```
+authentik objects: proxy provider + application `dozzle-local` (External host
+`https://dozzle.home.capilabs.dev`), added to the **authentik Embedded Outpost**. Login on the
+local URL checked 2026-11-21.
 
-Install it on **every** node (`docker-dev-1` = `192.168.40.10`, `docker-worker-1` = `192.168.40.11`):
+TODO: confirm the `dozzle-public` provider/application (`https://dozzle.homelab.capilabs.dev`)
+exists, is in the Embedded Outpost, and that a public login works end to end.
 
-```bash
-for h in 192.168.40.10 192.168.40.11; do
-  scp users.yml "$h":/tmp/users.yml
-  ssh -t "$h" 'sudo mkdir -p /mnt/docker-storage/dozzle &&
-               sudo install -m 0644 /tmp/users.yml /mnt/docker-storage/dozzle/users.yml &&
-               rm /tmp/users.yml && ls -l /mnt/docker-storage/dozzle/'
-done
-rm users.yml
-```
+TODO: bind an admin group to the Dozzle applications. Until then, any authentik user can read
+every container's logs.
 
-Then restart the service and check that both replicas stay up:
+Both routers must keep `authentik@file`. With `forward-proxy`, Dozzle trusts the
+`X-Authentik-*` headers, so an unprotected router would let anyone pick their user name.
 
-```bash
-# on docker-dev-1 (manager)
-svc=$(docker service ls --format '{{.Name}}' | grep dozzle)
-docker service update --force "$svc"
-docker service ps "$svc" --no-trunc    # both nodes Running, no repeated Failed rows
-```
+`DOZZLE_AUTH_LOGOUT_URL` takes one URL and points at the local host, so signing out from the
+public URL while off the LAN fails. Switch it to the public host if that's the usual way in.
 
-Adding or changing a user means editing `users.yml` on **both** nodes.
+### Old `simple` auth (removed)
 
-TODO: replace with authentik SSO (Traefik forward-auth + `DOZZLE_AUTH_PROVIDER=forward-proxy`).
-Then there's no per-node file to keep in sync. Tracked in [open-items](../open-items.md).
+Before SSO, Dozzle used `DOZZLE_AUTH_PROVIDER=simple` with `/data/users.yml`. `/data` is a local
+bind mount on a global service, so every node needed its own copy of the file, and a node without
+it crash-looped with `fatal No users.yaml or users.yml file found`. If you ever go back to it,
+generate the file with `docker run --rm amir20/dozzle:latest generate admin --password ...` and
+install it on both nodes under `/mnt/docker-storage/dozzle/`.
+
+TODO: delete the leftover `users.yml` from `/mnt/docker-storage/dozzle/` on `docker-dev-1` and
+`docker-worker-1` (the password was at `infisical:/homelab/dozzle/admin-password`).

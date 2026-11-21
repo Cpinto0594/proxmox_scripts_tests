@@ -10,8 +10,13 @@ Hard-won lessons. Check here before debugging.
 - **Swarm `mode: host` ports have no `host_ip`.** They bind on all interfaces of the node. Use a firewall to restrict.
 - **`swarm init --force-new-cluster` ignores `--advertise-addr`** (known Docker bug). Stale address stays.
 - **Behind Cloudflare Tunnel, no certresolver on the public router.** Cloudflare terminates TLS; use `entrypoints=web`.
-- **Global services with bind mounts need the files on every node.** A bind volume is local to the node, so a config file placed on one node is missing on the other. Dozzle's replica there exited with `fatal No users.yaml or users.yml file found`. Copy the file to each node (see [Dozzle](services/dozzle.md#users-file-usersyml)) or use a Swarm `config`.
+- **Global services with bind mounts need the files on every node.** A bind volume is local to the node, so a config file placed on one node is missing on the other. Dozzle's replica there exited with `fatal No users.yaml or users.yml file found`. Copy the file to each node or use a Swarm `config`. (Dozzle has since moved to [authentik forward auth](services/authentik-forward-auth.md), so it no longer needs the file.)
 - **Always set `routers.<name>.service=<name>`** explicitly, especially with multiple routers.
+- **authentik forward auth returns authentik's 404 page** when the embedded outpost has no provider for the host. The app's URL then shows a broken authentik page (404s for `/static/dist/...`). Creating the provider and application isn't enough: add the application to **Outposts → authentik Embedded Outpost**. See [authentik forward auth](services/authentik-forward-auth.md#troubleshooting).
+- **Don't copy the routers from authentik's Traefik example** (`default-router` → `http://ip.internal`, outpost service URL ending in `/outpost.goauthentik.io`). They're placeholders that take over the app's hostname and double the outpost path.
+- **Every router of a header-trusting app needs the auth middleware.** Dozzle `forward-proxy` trusts `X-Authentik-*`; a router without `authentik@file` lets anyone set those headers themselves.
+- **Traefik logs router errors only when its config changes.** An old `service ... does not exist` stays in `docker logs` after the fix. Check with `--since`.
+- **The Traefik container's tools are busybox.** `wget` has no `--max-redirect` (and with `2>&1 | grep` the error disappears silently). `nslookup` prints `NXDOMAIN` for the Tailscale search-domain attempt even when the bare name resolves.
 
 ## Postgres
 

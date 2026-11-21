@@ -10,7 +10,7 @@ Everything running on the Docker nodes, from `docker ps`, `docker inspect` and `
 |---|---|---|---|---|---|---|
 | Dokploy | `docker-dev-1` | Swarm service (Dokploy-managed) | v0.30.7 | — | 3000 | `/etc/dokploy`, volume `dokploy` |
 | Dokploy Postgres | `docker-dev-1` | Swarm service (Dokploy-managed) | Postgres 16 | — | — | volume `dokploy-postgres` |
-| Traefik (`dokploy-traefik`) | `docker-dev-1` | Container (Dokploy-managed) | v3.6.25 | — | 80, 443 (tcp+udp) | `/etc/dokploy/traefik/` (`traefik.yml`, `dynamic/`) |
+| Traefik (`dokploy-traefik`) | `docker-dev-1` | Container (Dokploy-managed) | v3.6.25 | — | 80, 443 (tcp+udp) | `/etc/dokploy/traefik/` (`traefik.yml`, `dynamic/`: `technitium-lxc.yml`, `authentik-fw.yml`) |
 | cloudflared | `docker-dev-1` | Compose · `local-infra-cloudflare-tunnel-e0cbqi` | `latest` | — | — | — |
 
 ## Homelab apps
@@ -24,7 +24,8 @@ Everything running on the Docker nodes, from `docker ps`, `docker inspect` and `
 | Databasus | `docker-dev-1` | Compose · `homelab-databasus-kd3hwx` | `latest` | `databasus.homelab…`, `databasus.home…` | 9002 | `databasus_data` | Backs up the tenant-os Postgres DBs |
 | Beszel hub | `docker-worker-1` | Swarm · `homelab-beszel-eynrop` | 0.19.0 | `beszel.homelab…`, `beszel.home…` | — | `beszel_hub_data` | Monitoring dashboard |
 | Beszel agents | both nodes | Swarm · `homelab-beszel-eynrop` | 0.19.0 | — | — | `beszel_agent_data`, `…_dev1` | One service per node (`beszel-agent`, `beszel-agent-dev1`) |
-| [Dozzle](dozzle.md) | both nodes (global, 2/2) | Swarm · `homelab-dozzle-8apzz5` | `latest` | `dozzle.homelab…`, `dozzle.home…` | — | `dozzle-data` | Log viewer, swarm mode |
+| [authentik](authentik.md) | `docker-worker-1` | Swarm · `homelab-authentik-nwlvpq` | 2026.8.5 | `authentik.homelab…`, `authentik.home…` | — | `/mnt/docker-storage/authentik/*`, DB on the Patroni VIP | SSO / IdP. [Forward auth](authentik-forward-auth.md) for apps without SSO |
+| [Dozzle](dozzle.md) | both nodes (global, 2/2) | Swarm · `homelab-dozzle-8apzz5` | `latest` | `dozzle.homelab…`, `dozzle.home…` | — | `dozzle-data` | Log viewer, swarm mode. Login via authentik forward auth |
 | Docs site | `docker-dev-1` | Compose · `homelab-zensical-l9cgdm` | built from repo | `docs.home.capilabs.dev` | — | — | This site. Local only |
 
 ## tenant-os
@@ -50,7 +51,6 @@ Everything running on the Docker nodes, from `docker ps`, `docker inspect` and `
 
 | Service | Where | Notes |
 |---|---|---|
-| authentik | `docker-worker-1`, Dokploy Swarm | SSO / IdP, `authentik.homelab…` / `authentik.home…`. External DB on the Patroni VIP. Compose ready — [page](authentik.md) |
 | Pterodactyl Panel | `docker-worker-1`, Dokploy | MariaDB + Redis, `pterodactyl.homelab.capilabs.dev` |
 | Pterodactyl Wings | VM 110 `wings-gameserver-01` on `pvenode1` (created, stopped), plain Compose | Needs host net, privileged, docker.sock |
 | MariaDB Galera + MaxScale | 3 VMs | Learning lab, latest stable MariaDB |

@@ -6,6 +6,47 @@ Each entry: what changed, why, files touched, and follow-ups. Keep the detailed
 
 ---
 
+## 2026-11-21 — Dozzle login through authentik forward auth
+
+**What:** Replaced Dozzle's `simple` auth (`users.yml` on each node) with authentik SSO. Traefik
+forward auth goes through authentik's embedded outpost, and Dozzle runs with
+`DOZZLE_AUTH_PROVIDER=forward-proxy` and reads the `X-Authentik-*` headers. Added
+`dokploy/traefik/dynamic/authentik-fw.yml` (middlewares `authentik`, `forwarded-https` and service
+`authentik-outpost`) and installed it in `/etc/dokploy/traefik/dynamic/` on `docker-dev-1`. Put
+`authentik@file` on both Dozzle routers, added `dozzle-outpost-public` / `dozzle-outpost-local` for
+`/outpost.goauthentik.io/*`, and created the `dozzle-local` proxy provider + application. Login
+on `https://dozzle.home.capilabs.dev` works.
+
+Problems on the way:
+
+- The first version of the Traefik file carried the placeholder routers from authentik's docs
+  example (`default-router` → `http://ip.internal`, outpost URL with the path doubled). Removed.
+- `authentik-outpost@file does not exist`: the server copy of the file was older than the repo.
+- The app URL showed authentik's 404 page because the application wasn't in the Embedded Outpost.
+  Adding it fixed the login.
+- `context canceled` on the forward-auth call was the browser aborting requests. Traefik reaches
+  authentik fine through both the service VIP and `tasks.<service>`.
+
+**Why:** No per-node `users.yml` to keep in sync on a global service, and one login for the
+homelab. First step of moving app logins to authentik.
+
+**Files:** `dokploy/traefik/dynamic/authentik-fw.yml`,
+`dokploy/compose-files/projects/homelab/dozzle/compose.yml`,
+`docs-zensical/docs/services/authentik-forward-auth.md` (new),
+`docs-zensical/docs/services/dozzle.md`, `docs-zensical/docs/services/authentik.md`,
+`docs-zensical/docs/services/README.md`, `docs-zensical/docs/gotchas.md`,
+`docs-zensical/docs/open-items.md`, `docs-zensical/zensical.toml`,
+`docs-zensical/docs/worklog.md`
+
+**Follow-ups:**
+
+- [ ] Create or confirm the `dozzle-public` provider/application, and test a login on `https://dozzle.homelab.capilabs.dev`.
+- [ ] Bind an admin group to the Dozzle applications.
+- [ ] Delete the old `users.yml` from `/mnt/docker-storage/dozzle/` on both nodes.
+- [ ] Pin the Dozzle image to a version tag.
+
+---
+
 ## 2026-11-17 — MikroTik addresses and VLAN gateways
 
 **What:** Filled in the VLAN 10–40 gateways in the IP plan from `/ip address print` on the

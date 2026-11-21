@@ -1,3 +1,10 @@
+# Traefik dynamic config: authentik forward auth (embedded outpost) for apps without SSO.
+# Lives in Dokploy's Traefik dynamic dir on docker-dev-1: /etc/dokploy/traefik/dynamic/authentik-fw.yml
+# Shared parts only. Routers are labels on each app:
+#   <app>-public / <app>-local     middlewares=[forwarded-https@file,]authentik@file
+#   <app>-outpost-public / -local  Host(app) && PathPrefix(/outpost.goauthentik.io/) -> authentik-outpost@file
+# The address uses the authentik Swarm service name (<stack>_authentik-server); update it if the stack is recreated.
+# Docs: docs-zensical/docs/services/authentik-forward-auth.md
 http:
   middlewares:
     authentik:
@@ -18,6 +25,7 @@ http:
           - X-authentik-meta-provider
           - X-authentik-meta-app
           - X-authentik-meta-version
+
     # Public path: cloudflared hits the `web` entrypoint over plain HTTP. Without this,
     # the outpost builds http:// redirect URLs (same issue as authentik's own public router).
     forwarded-https:
@@ -25,23 +33,10 @@ http:
         customRequestHeaders:
           X-Forwarded-Proto: https
 
-  routers:
-    default-router:
-      rule: "Host(`dozzle.home.capilabs.dev`)"
-      middlewares:
-        - authentik
-      priority: 10
-      service: app
-    default-router-auth:
-      rule: "Host(`dozzle.home.capilabs.dev`) && PathPrefix(`/outpost.goauthentik.io/`)"
-      priority: 15
-      service: authentik
   services:
-    app:
+    # Used by the per-app `<app>-outpost-*` routers (Dozzle labels: service=authentik-outpost@file).
+    # No path here: the request already carries /outpost.goauthentik.io/...
+    authentik-outpost:
       loadBalancer:
         servers:
-          - url: http://ip.internal
-    authentik:
-      loadBalancer:
-        servers:
-          - url: http://homelab-authentik-nwlvpq_authentik-server:9000/outpost.goauthentik.io
+          - url: http://homelab-authentik-nwlvpq_authentik-server:9000

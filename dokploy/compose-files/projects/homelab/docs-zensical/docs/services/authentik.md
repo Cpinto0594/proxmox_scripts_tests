@@ -4,7 +4,7 @@ Single sign-on for the homelab apps (OIDC / OAuth2, SAML, LDAP, forward-auth).
 
 | | |
 |---|---|
-| Status | **Compose written, not deployed yet** |
+| Status | Deployed, stack `homelab-authentik-nwlvpq` (seen 2026-11-21) |
 | Compose | `dokploy/compose-files/projects/homelab/authentik/compose.yml` |
 | Env sample | `dokploy/compose-files/projects/homelab/authentik/.env.sample` |
 | Dokploy type | Compose, **Docker Swarm** (can't be changed after creation) |
@@ -220,6 +220,11 @@ Cloudflare terminates TLS and cloudflared hits Traefik's `web` entrypoint over p
 Traefik trusts cloudflared's forwarded headers, it sends `X-Forwarded-Proto: http`, so authentik
 would build `http://` redirect and issuer URLs and OAuth logins would fail. The local router
 terminates TLS in Traefik, so it already sends `https`. TODO: confirm after the first deploy.
+
+## Forward auth for apps without SSO
+
+Apps with no OIDC/SAML of their own (Dozzle so far) are protected by Traefik forward auth through
+the embedded outpost. See [authentik forward auth](authentik-forward-auth.md).
 
 ## Proxmox VE login (OpenID Connect realm)
 
