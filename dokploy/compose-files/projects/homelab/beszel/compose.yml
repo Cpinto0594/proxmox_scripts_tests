@@ -5,6 +5,7 @@ services:
     restart: unless-stopped
     environment:
       APP_URL: https://beszel.homelab.capilabs.dev   # used for notification links and agent config generation
+      USER_CREATION: true
 
     volumes:
       - beszel_hub_data:/beszel_data
