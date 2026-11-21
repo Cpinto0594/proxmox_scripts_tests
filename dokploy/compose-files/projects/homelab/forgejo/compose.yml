@@ -120,8 +120,8 @@ services:
       FORGEJO__service__REQUIRE_SIGNIN_VIEW: "false"
 
       # --- OAuth2 / SSO (optional) ---
-      FORGEJO__oauth2_client__ENABLE: true
-      FORGEJO__oauth2_client__ENABLE_AUTO_REGISTRATION: true
+      FORGEJO__oauth2_client__ENABLE: "true"
+      FORGEJO__oauth2_client__ENABLE_AUTO_REGISTRATION: "true"
 
     volumes:
       - forgejo-data:/data
