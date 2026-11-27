@@ -4,7 +4,7 @@
 
 | Node | IP | Notes |
 |---|---|---|
-| `pvemaster1` | 192.168.1.90 | HP Elite Mini 800 G9, i7-12700T, **16 GB RAM** (new hardware), running the cloned disk of the old `pvemaster1` |
+| `pvemaster1` | 192.168.1.90 | HP Elite Mini 800 G9, i7-12700T, 32 GB RAM (new hardware, second module added 2026-11-27), running the cloned disk of the old `pvemaster1` |
 | `pvenode1` | 192.168.1.91 | Dell OptiPlex Micro 7010 |
 | `pvenode2` | 192.168.1.92 | HP Pro Mini 400 G9, i5-13500T, 32 GB (the former `pvemaster1`). Third node, in the cluster. Will host the 3rd Patroni/Galera VM. Uses `vmbr1` like the other nodes (see Networking) |
 
@@ -20,7 +20,7 @@ Three nodes, **3 expected votes**, quorum is 2 (`pvecm status`, 2026-10-27). One
 ## Networking
 
 - `vmbr1` = VLAN-aware bridge on the USB 2.5G adapter, trunking 10/20/30/40; carries the management IP/gateway and per-VLAN host IPs.
-- `vmbr0` = onboard 1G, kept configured with no IP as a fallback.
+- `vmbr0` = onboard 1G, kept configured with no IP as a fallback. On every node it's cabled to the SODOLA switch for [Wake-on-LAN](../network/usb-2.5g-adapters.md#wake-on-lan-onboard-nics), still with no IP.
 - Full write-up, both nodes' `/etc/network/interfaces`, and failback steps: [2.5G USB adapters](../network/usb-2.5g-adapters.md).
 
 ## Storage
@@ -82,20 +82,20 @@ Both are marked as templates and their disks are on `local-lvm` on `pvemaster1`,
 
 ## Capacity and placement
 
-Source: `pvesh get /cluster/resources` (2026-10-27). `pvenode1` and `pvenode2` have 32 GB RAM (31 GB usable) and an i5-13500T (14 cores / 20 threads). `pvemaster1` has an i7-12700T (12 cores / 20 threads) but only **16 GB** RAM (15 GB usable).
+Source: `pvesh get /cluster/resources` (2026-10-27), RAM sizes updated 2026-11-27. All three nodes have 32 GB RAM. `pvenode1` and `pvenode2` have an i5-13500T (14 cores / 20 threads), `pvemaster1` an i7-12700T (12 cores / 20 threads). `pvemaster1` went from 16 GB to 32 GB on 2026-11-27. TODO: re-run `pvesh get /cluster/resources` to confirm its usable RAM (assumed 31 GB like the others) and refresh the in-use figures below.
 
 | Node | Running guests | vCPU allocated | RAM allocated | RAM in use |
 |---|---|---|---|---|
-| `pvemaster1` (15 GB usable) | k8s-master1, docker-dev-1, technitium-dns | 9 | 12.5 GB | 10.4 GB |
+| `pvemaster1` (31 GB usable, TODO: confirm) | k8s-master1, docker-dev-1, technitium-dns | 9 | 12.5 GB | 10.4 GB |
 | `pvenode1` (31 GB usable) | k8s-worker1, docker-worker-1 | 10 | 12 GB | 9.7 GB |
 | `pvenode2` (31 GB usable) | k8s-worker2 | 4 | 6 GB | 3.9 GB |
-| **Total** | | 23 | 30.5 GB of 77 GB | 24 GB |
+| **Total** | | 23 | 30.5 GB of 93 GB | 24 GB |
 
 VM 110 (`wings-gameserver-01`, 2 vCPU / 4 GB) is stopped on `pvenode1`; starting it takes that node to 16 GB allocated.
 
 Findings:
 
-- **`pvemaster1` is the tight node.** 10.4 of 15 GB are in use, with 12.5 GB allocated. It is no longer over-allocated, but only about 4.5 GB is free. A second memory module is planned.
-- **Node failure is survivable.** `pvenode2` has about 27 GB free, enough to take all of `pvemaster1`'s or `pvenode1`'s guests. `pvemaster1` can't absorb another node's guests: only 2.5 GB are unallocated.
+- **No node is tight any more.** `pvemaster1` was the tight one (10.4 of 15 GB in use) until its second memory module went in on 2026-11-27. With 31 GB it has about 18.5 GB unallocated.
+- **Node failure is survivable.** `pvenode2` has about 25 GB unallocated and `pvemaster1` about 18.5 GB, so either can take all of another node's guests (12.5 GB at most).
 - **Kubernetes workers are split across hosts.** `k8s-worker1` is on `pvenode1` and `k8s-worker2` on `pvenode2`, so losing one worker host leaves the other worker running. The control plane (`k8s-master1`, 4 GB) is on `pvemaster1`, a single host.
 - **Proxmox names differ from hostnames** for the Docker VMs (`docker.dev.1` → `docker-dev-1`, `docker.worker.1` → `docker-worker-1`). Renaming in Proxmox (VM → Options → Name) would make the UI, Beszel, and these docs line up.

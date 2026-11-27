@@ -33,13 +33,15 @@ MikroTik addresses, from `/ip address print` (2026-11-17), all static:
 
 ### Proxmox hosts
 
-On all three nodes, host IPs live on `vmbr1` (USB 2.5G adapter) and its VLAN sub-interfaces. On `pvemaster1` and `pvenode1`, `vmbr0` (onboard 1G) and `vmbr0.10/.20/.30/.40` exist as a fallback but are down with no IPs. `pvenode2` has no `vmbr0` fallback (verified 2026-10-27).
+On all three nodes, host IPs live on `vmbr1` (USB 2.5G adapter) and its VLAN sub-interfaces. `vmbr0` (onboard 1G) and `vmbr0.10/.20/.30/.40` exist on every node as a fallback with no IPs.
 
 | Host | VLAN 1 (`vmbr1`) | VLAN 10 (`vmbr1.10`) | VLAN 20 (`vmbr1.20`) | VLAN 30 (`vmbr1.30`) | VLAN 40 (`vmbr1.40`) | Switch port |
 |---|---|---|---|---|---|---|
 | `pvemaster1` | 192.168.1.90 | 192.168.10.5 | 192.168.20.5 | 192.168.30.5 | 192.168.40.5 | ether2 |
 | `pvenode1` | 192.168.1.91 | 192.168.10.6 | 192.168.20.6 | 192.168.30.6 | 192.168.40.6 | ether3 |
 | `pvenode2` | 192.168.1.92 | 192.168.10.7 | 192.168.20.7 | 192.168.30.7 | 192.168.40.7 | ether4 |
+
+**Onboard NIC (`vmbr0`):** no IPs. The onboard NICs are cabled to the SODOLA for [Wake-on-LAN](../network/usb-2.5g-adapters.md#wake-on-lan-onboard-nics) only. They briefly had `192.168.1.100`–`.102` on 2026-11-27, removed the same day on all three nodes.
 
 All subnets are /24. Pattern: each new node takes the previous node's addresses +1 — `.90`, `.91`, `.92` on VLAN 1 and `.5`, `.6`, `.7` on VLANs 10–40. `pvenode2` is the third node.
 
@@ -55,6 +57,7 @@ All subnets are /24. Pattern: each new node takes the previous node's addresses 
 | Technitium DNS (Primary) | 192.168.10.2 | LXC 108 on `pvemaster1`, `dns1.home.capilabs.dev` |
 | Technitium DNS (Secondary) | 192.168.10.3 | Cluster replica, `dns2.home.capilabs.dev`. Answers DNS and serves the console on :5380 (checked 2026-11-17). TODO: CTID and node |
 | DXP2800 (UGOS) | 192.168.20.2 | NFS |
+| GL.iNet Comet X (GL-RM4PE) KVM | 192.168.1.79 | Quad-port IP KVM, `kvm.home.capilabs.dev`. VLAN 1, so not on the Tailscale routes. TODO: confirm static vs DHCP reservation. See [hardware](hardware.md#remote-management-kvm) |
 
 ### Kubernetes (VLAN 30)
 

@@ -6,6 +6,117 @@ Each entry: what changed, why, files touched, and follow-ups. Keep the detailed
 
 ---
 
+## 2026-11-27 — `pvemaster1` upgraded to 32 GB RAM
+
+**What:** Second 16 GB DDR5 module added to `pvemaster1` (HP Elite Mini 800 G9), from 16 GB to
+32 GB. All three nodes now have 32 GB.
+
+**Why:** `pvemaster1` was the tight node (10.4 of 15 GB in use) and couldn't take another node's
+guests on failure.
+
+**Files:** `docs-zensical/docs/inventory/hardware.md`, `docs-zensical/docs/platforms/proxmox.md`,
+`docs-zensical/docs/worklog.md`
+
+**Follow-ups:** confirm usable RAM and speed on the host and refresh the capacity table:
+
+```bash
+free -g
+dmidecode -t memory | grep -E "Size|Speed" | grep -v "No Module"
+pvesh get /cluster/resources --type node
+```
+
+---
+
+## 2026-11-27 — Onboard NICs set up for Wake-on-LAN (all nodes)
+
+**What:** The owner cabled and enabled `pvemaster1`'s onboard 1G NIC (`eno1`). It was first set
+up with `192.168.1.100/24` and a second `gateway` on `vmbr0`. Reviewing the interfaces file found
+two problems: two interfaces on the same /24 (one default route survives, ARP flux, traffic can
+quietly use the 1G link), and the Wake-on-LAN `post-up` attached to `vmbr1.40`. The NIC is only
+for Wake-on-LAN, so the owner applied the fix: no IP or gateway on `vmbr0`, and
+`post-up ethtool -s eno1 wol g` under `auto eno1`. The onboard 1G ports are cabled to the SODOLA
+switch, not the MikroTik. Documented the new config, a
+[Wake-on-LAN](network/usb-2.5g-adapters.md#wake-on-lan-onboard-nics) section (check,
+BIOS, `etherwake` test), the SODOLA cabling, and what it means for failback. Also added two
+gotchas.
+
+**Why:** Wake `pvemaster1` remotely from power-off. The USB adapter can't be relied on for that.
+
+**Files:** `docs-zensical/docs/network/usb-2.5g-adapters.md`, `docs-zensical/docs/network/README.md`,
+`docs-zensical/docs/inventory/ip-plan.md`, `docs-zensical/docs/inventory/hardware.md`,
+`docs-zensical/docs/platforms/proxmox.md`, `docs-zensical/docs/gotchas.md`,
+`docs-zensical/docs/open-items.md`, `docs-zensical/docs/worklog.md`
+
+Also documented an active-backup bond (USB primary, onboard standby) as a
+[future enhancement](network/usb-2.5g-adapters.md#future-enhancement-active-backup-bond): the
+config, the switch-side VLAN changes, apply and test steps, and caveats. Not applied.
+
+Recorded the SODOLA cabling from the owner: onboard NICs on SODOLA ports 1–3 (`pvemaster1`
+`7c:57:58:5d:a2:e4`, `pvenode1` `20:88:10:97:b9:44`, `pvenode2` `30:13:8b:81:e4:a8`), and the
+SODOLA uplink from its port 8 to MikroTik `ether8`. Added a
+[SODOLA port map](inventory/hardware.md#sodola-port-map), updated the MikroTik port map (`ether8`),
+and filled the port and MAC placeholders in the WoL and bond sections.
+
+Reworked the [Compute](inventory/hardware.md#compute) table in the hardware inventory. It now
+has one row per host (model, CPU, RAM, role) and a separate
+[Network interfaces](inventory/hardware.md#network-interfaces) table with one row per NIC
+(interface, chipset/driver, MAC, switch port, use). The notes below each table are now bullets in
+the same style.
+
+The owner then applied the same fix on `pvenode1` and `pvenode2`: no IP on `vmbr0`, and
+`post-up ethtool -s nic0 wol g` under `auto nic0`. Rewrote their config tabs from the pasted files
+plus that change, and made the Wake-on-LAN section cover all three nodes (MACs, SODOLA ports,
+BIOS, `etherwake` per node). Recorded that `pvenode2` now has a `vmbr0` fallback and its adapter
+shows as `enx6c1ff7cd73e3`. Closed the "re-document pvenode1/pvenode2" open item.
+
+**Follow-ups:** paste the applied `/etc/network/interfaces` and the check output (the doc was
+written from the planned change), check the VLANs on the SODOLA ports and `ether8`, set the BIOS and test a
+wake from power-off on each node (see [open items](open-items.md)). Couldn't
+verify live: SSH from the workstation to `192.168.1.90` was refused (no key).
+
+---
+
+## 2026-11-27 — GL.iNet Comet X KVM added to the inventory (docs)
+
+**What:** Added the GL.iNet Comet X (GL-RM4PE) quad-port IP KVM to the hardware inventory (new
+[Remote management (KVM)](inventory/hardware.md#remote-management-kvm) section) and to the
+[IP plan](inventory/ip-plan.md#infrastructure): `192.168.1.79` on VLAN 1, web UI at
+`kvm.home.capilabs.dev`. Specs taken from GL.iNet's product page. Noted that VLAN 1 isn't on the
+Tailscale routes, so the KVM can't be reached remotely as things stand.
+
+**Why:** New device in the homelab; it gives remote console/BIOS access to the Proxmox nodes.
+
+**Files:** `docs-zensical/docs/inventory/hardware.md`, `docs-zensical/docs/inventory/ip-plan.md`,
+`docs-zensical/docs/open-items.md`, `docs-zensical/docs/worklog.md`
+
+**Follow-ups:** port-to-host mapping, switch port and power source, static vs DHCP, the DNS
+record and certificate, OptiPlex EDID through the KVM, remote access, and the admin password in
+Infisical (see [open items](open-items.md)). Couldn't verify anything live: from the workstation
+(WSL), `kvm.home.capilabs.dev` resolved through public DNS and `192.168.1.79` didn't answer ping.
+
+---
+
+## 2026-11-25 — Apps dropdown in the docs nav (docs)
+
+**What:** Added an **Apps** section under Services in the sidebar, one entry per app with a
+compose file in `dokploy/compose-files/projects/homelab/` (GitLab left out, it's retired).
+Wrote the missing app pages from the compose files: Forgejo, Infisical, Portainer, Databasus,
+Cloudflare Tunnel, Docs site, Termix. Linked them from the [service catalog](services/README.md)
+and added a Termix row there.
+
+**Why:** Easier to find an app's page as the number of services grows.
+
+**Files:** `docs-zensical/zensical.toml`, `docs-zensical/docs/services/{forgejo,infisical,portainer,databasus,cloudflared,docs-site,termix}.md` (new),
+`docs-zensical/docs/services/README.md`, `docs-zensical/docs/open-items.md`, `docs-zensical/docs/worklog.md`
+
+**Follow-ups:** the new pages carry `TODO:`s, mainly: Termix stack name and whether it's
+deployed, `forgejo-runner2` on `docker-dev-1`, Infisical paths for the app secrets, the
+`infra-network` mismatch in the cloudflared compose file, and the missing `init-db-script.sh`
+for Databasus. `technitium/compose.yml` is unused (Technitium runs in LXC 108); the nav entry
+points to the LXC page.
+
+---
+
 ## 2026-11-20 — Beszel login through authentik OIDC (docs)
 
 **What:** Documented the Beszel ↔ authentik OpenID Connect setup on a new [Beszel](services/beszel.md)

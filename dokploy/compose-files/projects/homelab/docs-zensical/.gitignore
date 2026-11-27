@@ -5,3 +5,4 @@ secrets/
 *.pem
 .cache/
 site/
+.venv/
