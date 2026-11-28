@@ -1,0 +1,59 @@
+# UpSnap — Wake-on-LAN dashboard (PocketBase backend, own login)
+# Target: Dokploy Compose app, Compose Type = **Docker Compose** (NOT Swarm), runs on docker-dev-1.
+#
+# Why not Swarm: magic packets are UDP broadcasts and the ping/scan uses raw ICMP + nmap, so it
+# needs the host's network stack. Swarm ignores `network_mode: host` alongside `deploy:` (see the
+# Beszel agent note), so this follows the "needs host networking -> plain Docker Compose" rule
+# in docs/platforms/dokploy-swarm.md.
+#
+# Traefik: a host-network container has no IP on dokploy-network, so labels can't route to it.
+# The route lives in the file provider instead: dokploy/traefik/dynamic/upsnap.yml
+# (copy to /etc/dokploy/traefik/dynamic/ on docker-dev-1).
+
+services:
+  upsnap:
+    image: ghcr.io/seriousm4x/upsnap:5 # pin an exact 5.x tag once you've confirmed it works
+    container_name: upsnap
+    restart: unless-stopped
+    network_mode: host
+
+    # Bind to the VLAN 40 address only (not 0.0.0.0) so it isn't served on every host interface.
+    # Traefik reaches it at the same address, see dokploy/traefik/dynamic/upsnap.yml.
+    entrypoint: ["./upsnap", "serve", "--http", "${UPSNAP_LISTEN}"]
+
+    environment:
+      TZ: ${TZ}                                   # cron schedules use the container timezone
+      UPSNAP_INTERVAL: ${UPSNAP_INTERVAL}         # how often devices are pinged (6-field cron, seconds first)
+      UPSNAP_SCAN_RANGE: ${UPSNAP_SCAN_RANGE}     # network scan / device discovery
+      UPSNAP_SCAN_TIMEOUT: 500ms
+      UPSNAP_PING_PRIVILEGED: "true"
+      UPSNAP_WEBSITE_TITLE: ${UPSNAP_WEBSITE_TITLE}
+
+    # Name resolution during network scans -> Technitium
+    dns:
+      - 192.168.10.2
+      - 192.168.10.3
+
+    volumes:
+      - upsnap-data:/app/pb_data
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://${UPSNAP_LISTEN}/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.5"
+
+volumes:
+  upsnap-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/docker-storage/upsnap/data # create on docker-dev-1 before the first deploy

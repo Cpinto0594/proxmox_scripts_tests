@@ -1,0 +1,24 @@
+# Traefik dynamic config for UpSnap (Wake-on-LAN).
+# Lives in Dokploy's Traefik dynamic dir on docker-dev-1: /etc/dokploy/traefik/dynamic/upsnap.yml
+#
+# UpSnap runs with network_mode: host (plain Docker Compose, not Swarm), so it has no address on
+# dokploy-network and Traefik labels can't reach it. Route to the host address instead.
+# The URL must match UPSNAP_LISTEN in compose-files/projects/homelab/upsnap/.env.
+#
+#   upsnap.home.capilabs.dev -> 192.168.40.10:8090 (LAN / Tailscale only)
+#
+# Not published through the Cloudflare Tunnel: Tailscale already covers remote access.
+http:
+  routers:
+    upsnap-local:
+      rule: "Host(`upsnap.home.capilabs.dev`)"
+      entrypoints: [websecure]
+      tls:
+        certResolver: cloudflare
+      service: upsnap
+
+  services:
+    upsnap:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.40.10:8090"
