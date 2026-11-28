@@ -10,7 +10,7 @@ Everything running on the Docker nodes, from `docker ps`, `docker inspect` and `
 |---|---|---|---|---|---|---|
 | Dokploy | `docker-dev-1` | Swarm service (Dokploy-managed) | v0.30.7 | — | 3000 | `/etc/dokploy`, volume `dokploy` |
 | Dokploy Postgres | `docker-dev-1` | Swarm service (Dokploy-managed) | Postgres 16 | — | — | volume `dokploy-postgres` |
-| Traefik (`dokploy-traefik`) | `docker-dev-1` | Container (Dokploy-managed) | v3.6.25 | — | 80, 443 (tcp+udp) | `/etc/dokploy/traefik/` (`traefik.yml`, `dynamic/`: `technitium-lxc.yml`, `authentik-fw.yml`) |
+| Traefik (`dokploy-traefik`) | `docker-dev-1` | Container (Dokploy-managed) | v3.6.25 | — | 80, 443 (tcp+udp) | `/etc/dokploy/traefik/` (`traefik.yml`, `dynamic/`: `technitium-lxc.yml`, `authentik-fw.yml`, `upsnap.yml`) |
 | [cloudflared](cloudflared.md) | `docker-dev-1` | Compose · `local-infra-cloudflare-tunnel-e0cbqi` | `latest` | — | — | — |
 
 ## Homelab apps
@@ -28,6 +28,7 @@ Everything running on the Docker nodes, from `docker ps`, `docker inspect` and `
 | [Dozzle](dozzle.md) | both nodes (global, 2/2) | Swarm · `homelab-dozzle-8apzz5` | `latest` | `dozzle.homelab…`, `dozzle.home…` | — | `dozzle-data` | Log viewer, swarm mode. Login via authentik forward auth |
 | [Docs site](docs-site.md) | `docker-dev-1` | Compose · `homelab-zensical-l9cgdm` | built from repo | `docs.home.capilabs.dev` | — | — | This site. Local only |
 | [Termix](termix.md) | `docker-worker-1` | Swarm · TODO: stack name | `latest` | `ssh.home…` | — | `/mnt/docker-storage/termix` | Web SSH. TODO: confirm deployed (added after this snapshot) |
+| [UpSnap](upsnap.md) | `docker-dev-1` | Compose (host network) · `Upsnap` | 5 | `upsnap.home…` | `192.168.40.10:8090` (host network) | `/mnt/docker-storage/upsnap/data` | Wake-on-LAN for the Proxmox nodes. Routed by Traefik file provider. Local only. Added 2026-11-27 |
 
 ## tenant-os
 

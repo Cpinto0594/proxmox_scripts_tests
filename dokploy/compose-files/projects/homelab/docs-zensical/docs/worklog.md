@@ -6,6 +6,49 @@ Each entry: what changed, why, files touched, and follow-ups. Keep the detailed
 
 ---
 
+## 2026-11-27 — UpSnap added; onboard WoL NICs moved to VLAN 40
+
+**What:** Added [UpSnap](services/upsnap.md), a Wake-on-LAN dashboard, on `docker-dev-1` as a
+Dokploy Compose app (type **Docker Compose**, `network_mode: host`, listening on
+`192.168.40.10:8090`). Traefik routes `upsnap.home.capilabs.dev` to it through a new file-provider
+config (`dokploy/traefik/dynamic/upsnap.yml`), because labels can't route to a host-network
+container. Local only, no public router.
+
+UpSnap's network scan found nothing: scanning `192.168.1.0/24` from VLAN 40 sees hosts but no
+MACs (ARP doesn't cross the router), so the nodes were added by hand with their onboard-NIC MACs.
+Waking then worked from the MikroTik (`/tool wol`) but not from UpSnap, because the magic packet is
+a broadcast and the MikroTik doesn't forward it from VLAN 40 into VLAN 1. A static-ARP relay on the
+MikroTik was considered and dropped; instead the onboard NICs were moved into VLAN 40:
+
+- MikroTik `ether8`: added as tagged on VLAN 40 (PVID 1 unchanged). Equivalent command:
+  `/interface bridge vlan set [find vlan-ids=40] tagged=bridge,ether2,ether3,ether4,ether8`.
+- SODOLA port 8: Trunk, Native VLAN 1, Trunk vlan 1 + 40. It was briefly set to Access VLAN 40,
+  which mixes VLAN 1 into 40; corrected.
+- SODOLA ports 1–3: Access VLAN 40.
+- UpSnap devices use the nodes' VLAN 40 addresses so the wake goes to `192.168.40.255`.
+
+The three nodes are in UpSnap with their VLAN 40 addresses (`192.168.40.5`–`.7`), and a wake from
+power-off worked on each node. Dokploy app `Upsnap`; image kept on the `:5` tag; Technitium record
+`upsnap.home.capilabs.dev` exists; `LOCAL_DOMAIN` kept in `.env.sample` as a note. `pvemaster1` can't be woken from UpSnap
+(it hosts `docker-dev-1`); use `/tool wol interface=vlan-40` on the MikroTik. The `etherwake`
+examples now use `vmbr1.40`.
+
+**Why:** Wake the Proxmox nodes from a web UI instead of the MikroTik CLI.
+
+**Files:** `dokploy/compose-files/projects/homelab/upsnap/compose.yml`,
+`dokploy/compose-files/projects/homelab/upsnap/.env.sample`, `dokploy/traefik/dynamic/upsnap.yml`,
+`docs-zensical/zensical.toml`, `docs-zensical/docs/services/upsnap.md` (new),
+`docs-zensical/docs/services/README.md`, `docs-zensical/docs/network/usb-2.5g-adapters.md`,
+`docs-zensical/docs/network/README.md`, `docs-zensical/docs/inventory/hardware.md`,
+`docs-zensical/docs/inventory/ip-plan.md`, `docs-zensical/docs/gotchas.md`,
+`docs-zensical/docs/open-items.md`, `docs-zensical/docs/worklog.md`
+
+MikroTik VLAN 40 configured list checked: `tagged=ether2,ether3,ether4,bridge,ether8`.
+
+**Follow-ups:** the BIOS setting names (see [open items](open-items.md)).
+
+---
+
 ## 2026-11-27 — `pvemaster1` upgraded to 32 GB RAM
 
 **What:** Second 16 GB DDR5 module added to `pvemaster1` (HP Elite Mini 800 G9), from 16 GB to

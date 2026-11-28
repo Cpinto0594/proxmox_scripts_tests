@@ -37,6 +37,7 @@ nav = [
       { "Portainer" = "services/portainer.md" },
       { "Technitium DNS (LXC)" = "services/technitium-dns-lxc.md" },
       { "Termix (web SSH)" = "services/termix.md" },
+      { "UpSnap (Wake-on-LAN)" = "services/upsnap.md" },
     ] },
     { "authentik forward auth" = "services/authentik-forward-auth.md" },
   ] },

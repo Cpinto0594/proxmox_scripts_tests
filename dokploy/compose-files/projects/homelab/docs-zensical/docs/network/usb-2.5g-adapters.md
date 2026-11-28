@@ -25,15 +25,15 @@ flowchart LR
         nic0[nic0 / eno1 onboard 1G] -.-> vmbr0["vmbr0 + vmbr0.10–.40<br/>fallback · no IPs<br/>Wake-on-LAN"]
     end
     vmbr1 == trunk ==> sw["MikroTik ether2 / ether3 / ether4<br/>PVID 1 untagged · 10/20/30/40 tagged"]
-    vmbr0 -. "onboard 1G · SODOLA port 1/2/3" .-> sodola["SODOLA SL902<br/>192.168.1.3"]
-    sodola -. "SODOLA 8 ↔ ether8" .-> sw
+    vmbr0 -. "onboard 1G · SODOLA port 1/2/3<br/>access VLAN 40" .-> sodola["SODOLA SL902<br/>192.168.1.3"]
+    sodola -. "SODOLA 8 ↔ ether8<br/>VLAN 1 untagged + 40 tagged" .-> sw
 ```
 
 - **`vmbr1`** is a VLAN-aware Linux bridge on the USB adapter, restricted to `bridge-vids 10 20 30 40`. It carries the host's management IP and default gateway (`192.168.1.1`) on VLAN 1 (untagged), and the guests' tagged traffic.
 - **Host VLAN interfaces** `vmbr1.10`, `.20`, `.30`, `.40` give each host an address on every VLAN (`.5` on `pvemaster1`, `.6` on `pvenode1`, `.7` on `pvenode2` — see [ip-plan](../inventory/ip-plan.md#proxmox-hosts)). This is what lets the hosts mount NFS on VLAN 20 directly, without routing through the MikroTik.
 - **`vmbr0`** on the onboard 1G NIC is kept fully configured — including `vmbr0.10–.40` — but with **no IPs**. If the USB adapter dies, moving the IPs back to `vmbr0` (and the cable to the onboard port) restores the host without rebuilding the config. All three nodes have it: `eno1` on `pvemaster1`, `nic0` on `pvenode1` and `pvenode2`.
 - **Onboard NICs (since 2026-11-27):** cabled to the SODOLA on all three nodes for **Wake-on-LAN** only. `vmbr0` still has no IP. See [Wake-on-LAN](#wake-on-lan-onboard-nics).
-- **Switch side:** each host's USB adapter is on a MikroTik trunk port: PVID 1 / VLAN 1 untagged, VLANs 10, 20, 30, 40 tagged. See the [switch port map](../inventory/hardware.md#switch-port-map). The onboard 1G ports go to the **SODOLA** switch (`192.168.1.3`), not the MikroTik: `pvemaster1` port 1, `pvenode1` port 2, `pvenode2` port 3. The SODOLA uplinks from its port 8 to MikroTik `ether8`. See the [SODOLA port map](../inventory/hardware.md#sodola-port-map). TODO: the VLANs on those ports.
+- **Switch side:** each host's USB adapter is on a MikroTik trunk port: PVID 1 / VLAN 1 untagged, VLANs 10, 20, 30, 40 tagged. See the [switch port map](../inventory/hardware.md#switch-port-map). The onboard 1G ports go to the **SODOLA** switch (`192.168.1.3`), not the MikroTik: `pvemaster1` port 1, `pvenode1` port 2, `pvenode2` port 3. The SODOLA uplinks from its port 8 to MikroTik `ether8`. Ports 1–3 are access ports on VLAN 40, and port 8 / `ether8` is a trunk (VLAN 1 untagged, VLAN 40 tagged), set 2026-11-27 for [Wake-on-LAN](#wake-on-lan-onboard-nics). See the [SODOLA port map](../inventory/hardware.md#sodola-port-map).
 
 ## How it was rolled out
 
@@ -289,11 +289,33 @@ Notes:
 
 Each node's onboard 1G NIC is cabled to the SODOLA switch only so the host can be woken from power-off. The USB adapters can't be relied on for that, because USB ports usually lose power when the host is off. Magic packets are matched on the NIC's MAC, below the IP layer, so the onboard NIC has link and WoL enabled but **no IP**. `vmbr0` stays the no-IP fallback bridge. Configured on all three nodes on 2026-11-27.
 
+**The onboard NICs are on VLAN 40** (SODOLA ports 1–3, access VLAN 40). A magic packet is a broadcast, and broadcasts don't cross a router, so the sender must be on the same VLAN as the NICs. [UpSnap](../services/upsnap.md) runs on `docker-dev-1` on VLAN 40; while the NICs were on VLAN 1 its packets stopped at the MikroTik. Moved to VLAN 40 on 2026-11-27, with the uplink turned into a trunk:
+
+```mermaid
+flowchart LR
+    upsnap["UpSnap<br/>docker-dev-1 · VLAN 40"] --> mt[MikroTik]
+    mt -- "ether8 ↔ port 8 · trunk<br/>VLAN 1 untagged · VLAN 40 tagged" --> sodola[SODOLA]
+    sodola -- "port 1 · access VLAN 40" --> n1[pvemaster1 eno1]
+    sodola -- "port 2 · access VLAN 40" --> n2[pvenode1 nic0]
+    sodola -- "port 3 · access VLAN 40" --> n3[pvenode2 nic0]
+```
+
+- **MikroTik `ether8`:** PVID 1 (unchanged, `admit-all`), added as tagged on VLAN 40. `set tagged=` replaces the list, so check the configured list first and keep every port on it. Configured list checked 2026-11-27: `tagged=ether2,ether3,ether4,bridge,ether8` (`ether4` only drops out of `current-tagged` while `pvenode2` is off).
+
+    ```bash
+    # on the MikroTik
+    /interface bridge vlan print detail where vlan-ids=40
+    /interface bridge vlan set [find vlan-ids=40] tagged=bridge,ether2,ether3,ether4,ether8
+    ```
+
+- **SODOLA port 8:** Trunk, Native VLAN 1, Trunk vlan 1 + 40. VLAN 1 stays untagged so the SODOLA's management address (`192.168.1.3`) keeps working. It was briefly set to Access VLAN 40, which mixes VLAN 1 into VLAN 40: don't.
+- **SODOLA ports 1–3:** Access VLAN 40. Access ports carry one VLAN with no tags on the cable, which is what a powered-off NIC needs.
+
 | Host | NIC | MAC | SODOLA port | BIOS |
 |---|---|---|---|---|
-| `pvemaster1` | `eno1` | `7c:57:58:5d:a2:e4` | 1 | HP: Wake-on-LAN on, S5 maximum power savings off. TODO: confirm |
-| `pvenode1` | `nic0` | `20:88:10:97:b9:44` | 2 | Dell: Wake on LAN = LAN only, Deep Sleep Control off. TODO: confirm |
-| `pvenode2` | `nic0` | `30:13:8b:81:e4:a8` | 3 | HP: Wake-on-LAN on, S5 maximum power savings off. TODO: confirm |
+| `pvemaster1` | `eno1` | `7c:57:58:5d:a2:e4` | 1 | HP: Wake-on-LAN on, S5 maximum power savings off. Wake from power-off works (2026-11-27). TODO: confirm the exact setting names |
+| `pvenode1` | `nic0` | `20:88:10:97:b9:44` | 2 | Dell: Wake on LAN = LAN only, Deep Sleep Control off. Wake from power-off works (2026-11-27). TODO: confirm the exact setting names |
+| `pvenode2` | `nic0` | `30:13:8b:81:e4:a8` | 3 | HP: Wake-on-LAN on, S5 maximum power savings off. Wake from power-off works (2026-11-27). TODO: confirm the exact setting names |
 
 The config, in the onboard NIC's own stanza (`eno1` on `pvemaster1`, `nic0` on the others), with no `address`/`gateway` on `vmbr0`:
 
@@ -316,16 +338,35 @@ ethtool $NIC | grep -E 'Wake-on|Link detected'   # Wake-on: g, Link detected: ye
 
 TODO: paste the check output from each node.
 
-Wake a node from another one. The packet goes out on VLAN 1, untagged, through the MikroTik (`ether8`) and the SODOLA (port 8 → port 1/2/3):
+Ways to wake a node. Every one sends on VLAN 40:
+
+- **[UpSnap](../services/upsnap.md)** (`https://upsnap.home.capilabs.dev`) for `pvenode1` and `pvenode2`. Not `pvemaster1`: UpSnap runs on it.
+- **The MikroTik**, for any node, including `pvemaster1`:
+
+    ```bash
+    # on the MikroTik
+    /tool wol interface=vlan-40 mac=7c:57:58:5d:a2:e4   # pvemaster1
+    /tool wol interface=vlan-40 mac=20:88:10:97:b9:44   # pvenode1
+    /tool wol interface=vlan-40 mac=30:13:8b:81:e4:a8   # pvenode2
+    ```
+
+- **Another node**, out of its VLAN 40 interface (`vmbr1.40`, not `vmbr1`, which is VLAN 1):
+
+    ```bash
+    apt install -y etherwake                 # once, on the sending node
+    etherwake -i vmbr1.40 7c:57:58:5d:a2:e4   # pvemaster1
+    etherwake -i vmbr1.40 20:88:10:97:b9:44   # pvenode1
+    etherwake -i vmbr1.40 30:13:8b:81:e4:a8   # pvenode2
+    ```
+
+Check that a packet reaches a NIC while the node is still running, then wake it from power-off:
 
 ```bash
-apt install -y etherwake            # once, on the sending node
-etherwake -i vmbr1 7c:57:58:5d:a2:e4   # pvemaster1
-etherwake -i vmbr1 20:88:10:97:b9:44   # pvenode1
-etherwake -i vmbr1 30:13:8b:81:e4:a8   # pvenode2
+# on the target node (eno1 on pvemaster1, nic0 on the others)
+tcpdump -ni nic0 -e udp port 9      # expect a frame to ff:ff:ff:ff:ff:ff
 ```
 
-TODO: record whether a wake from full power-off works on each node. SODOLA ports 1–3 and 8 must have VLAN 1 untagged.
+A wake from power-off worked on each node on 2026-11-27, after the VLAN 40 change; before it, the MikroTik could wake a node but UpSnap couldn't.
 
 ## Failback to the onboard NIC
 
@@ -431,9 +472,9 @@ source /etc/network/interfaces.d/*
 
 The standby path is `eno1` → SODOLA → uplink → MikroTik. It must carry the same VLANs as `ether2`, or a failover keeps VLAN 1 but loses NFS (VLAN 20) and the guest VLANs.
 
-- **SODOLA, host ports** (1 `pvemaster1`, 2 `pvenode1`, 3 `pvenode2`): PVID 1, VLAN 1 untagged, VLANs 10/20/30/40 tagged.
-- **SODOLA, port 8 (uplink):** the same VLANs.
-- **MikroTik `ether8`:** add it to VLANs 10–40 tagged. `set tagged=` replaces the list, so the existing ports are included:
+- **SODOLA, host ports** (1 `pvemaster1`, 2 `pvenode1`, 3 `pvenode2`): PVID 1, VLAN 1 untagged, VLANs 10/20/30/40 tagged. They're access VLAN 40 today (for [Wake-on-LAN](#wake-on-lan-onboard-nics)); as trunks, magic packets from UpSnap would reach the NIC **tagged** VLAN 40. Most NICs match the magic pattern anywhere in the frame, but TODO: test a wake from power-off with the port trunked before relying on it.
+- **SODOLA, port 8 (uplink):** the same VLANs. Already a trunk with VLAN 1 native and VLAN 40 tagged (2026-11-27); add 10, 20, 30.
+- **MikroTik `ether8`:** add it to VLANs 10–30 tagged (VLAN 40 is done). `set tagged=` replaces the list, so the existing ports are included:
 
 ```
 /interface bridge vlan set [find vlan-ids=10] tagged=bridge,ether2,ether3,ether4,ether8

@@ -43,7 +43,7 @@ One row per NIC. USB adapter MACs are taken from their `enx<mac>` interface name
 | Device | Details |
 |---|---|
 | MikroTik CRS310-8G+2S+IN | Core switch/router, VLANs + inter-VLAN routing. Management IP `192.168.1.2` (VLAN 1). Replaced a defective TRENDnet TEG-3102WS. Admin password: TODO store in Infisical (e.g. `infisical:/homelab/network/mikrotik-admin-password`). |
-| SODOLA SL902-SWTGW218AS | Managed switch, web UI at `192.168.1.3` (VLAN 1). TODO: confirm port layout (believed 8× 2.5G RJ45 + 1× 10G SFP+), its role, its VLAN config, and what's on ports 4–7. Uplink: SODOLA port 8 ↔ MikroTik `ether8`. Ports 1–3: the Proxmox hosts' onboard 1G NICs, see [SODOLA port map](#sodola-port-map). Admin password: TODO store in Infisical (e.g. `infisical:/homelab/network/sodola-admin-password`). |
+| SODOLA SL902-SWTGW218AS | Managed switch, web UI at `192.168.1.3` (VLAN 1). TODO: confirm port layout (believed 8× 2.5G RJ45 + 1× 10G SFP+), its role, and what's on ports 4–7. VLANs: ports 1–3 access VLAN 40, port 8 trunk (VLAN 1 native, 40 tagged), the rest access VLAN 1 (2026-11-27). Uplink: SODOLA port 8 ↔ MikroTik `ether8`. Ports 1–3: the Proxmox hosts' onboard 1G NICs, see [SODOLA port map](#sodola-port-map). Admin password: TODO store in Infisical (e.g. `infisical:/homelab/network/sodola-admin-password`). |
 | Cabling | Cat5e — confirmed sufficient for 2.5G |
 | Workstation | Realtek 2.5GbE NIC |
 
@@ -94,7 +94,7 @@ Source: `/interface bridge port print` and `/interface bridge vlan print` (check
 | ether4 | `pvenode2` (HP Pro Mini), trunk | 1 | 1 | 10, 20, 30, 40 | Up |
 | ether5 | UGREEN DXP2800 NAS, access | 20 | 20 | — | Up |
 | ether6–7 | Unused (defconf) | 1 | — | — | Down |
-| ether8 | Uplink to SODOLA port 8 (2026-11-27). TODO: re-check PVID/VLANs, still defconf? | 1 | 1 | — | Up |
+| ether8 | Uplink to SODOLA port 8, trunk (2026-11-27). VLAN 40 tagged for [Wake-on-LAN](../network/usb-2.5g-adapters.md#wake-on-lan-onboard-nics) | 1 | 1 | 40 | Up |
 | sfp-sfpplus1–2 | Unused (defconf) | 1 | — | — | Down |
 
 The bridge itself is tagged on VLANs 10, 20, 30, and 40, so the switch has an L3 interface on each: `vlan-10`–`vlan-40` with `192.168.10.1`–`192.168.40.1`, the gateways for those VLANs. Management is `192.168.1.2` on `bridge` (VLAN 1). Full list in the [IP plan](ip-plan.md#vlans).
@@ -106,21 +106,23 @@ The bridge itself is tagged on VLANs 10, 20, 30, and 40, so the switch has an L3
 /interface bridge vlan set [find vlan-ids=10] tagged=bridge,ether2,ether3,ether4
 /interface bridge vlan set [find vlan-ids=20] tagged=bridge,ether2,ether3,ether4
 /interface bridge vlan set [find vlan-ids=30] tagged=bridge,ether2,ether3,ether4
-/interface bridge vlan set [find vlan-ids=40] tagged=bridge,ether2,ether3,ether4
+/interface bridge vlan set [find vlan-ids=40] tagged=bridge,ether2,ether3,ether4,ether8   # ether8 added 2026-11-27 (SODOLA uplink, WoL)
 ```
 
 The port comments on the switch match the current devices: `ether2` was relabelled `pvemaster1 (HP Elite Mini 800 G9) - trunk` on 2026-10-27, after the hardware swap.
 
 ## SODOLA port map
 
-SODOLA SL902-SWTGW218AS (`192.168.1.3`). Source: the owner, 2026-11-27. TODO: check the VLAN columns on the switch's web UI.
+SODOLA SL902-SWTGW218AS (`192.168.1.3`). Source: the owner and the switch's VLAN page (web UI: Port vlan type / Access VLAN / Native VLAN / Trunk vlan), 2026-11-27.
 
 | Port | Device | MAC | VLANs | Purpose |
 |---|---|---|---|---|
-| 1 | `pvemaster1` onboard `eno1` | `7c:57:58:5d:a2:e4` | 1 untagged (TODO: verify) | [Wake-on-LAN](../network/usb-2.5g-adapters.md#wake-on-lan-onboard-nics) |
-| 2 | `pvenode1` onboard `nic0` | `20:88:10:97:b9:44` | 1 untagged (TODO: verify) | [Wake-on-LAN](../network/usb-2.5g-adapters.md#wake-on-lan-onboard-nics) |
-| 3 | `pvenode2` onboard `nic0` | `30:13:8b:81:e4:a8` | 1 untagged (TODO: verify) | [Wake-on-LAN](../network/usb-2.5g-adapters.md#wake-on-lan-onboard-nics) |
-| 4–7 | TODO | — | — | — |
-| 8 | Uplink to MikroTik `ether8` | — | 1 untagged (TODO: verify) | Uplink |
+| 1 | `pvemaster1` onboard `eno1` | `7c:57:58:5d:a2:e4` | Access, VLAN 40 | [Wake-on-LAN](../network/usb-2.5g-adapters.md#wake-on-lan-onboard-nics) |
+| 2 | `pvenode1` onboard `nic0` | `20:88:10:97:b9:44` | Access, VLAN 40 | [Wake-on-LAN](../network/usb-2.5g-adapters.md#wake-on-lan-onboard-nics) |
+| 3 | `pvenode2` onboard `nic0` | `30:13:8b:81:e4:a8` | Access, VLAN 40 | [Wake-on-LAN](../network/usb-2.5g-adapters.md#wake-on-lan-onboard-nics) |
+| 4–7, 9 | TODO | — | Access, VLAN 1 | — |
+| 8 | Uplink to MikroTik `ether8` | — | Trunk: native VLAN 1, trunk VLANs 1, 40 | Uplink |
 
-For the onboard NICs to be usable for failback or the [active-backup bond](../network/usb-2.5g-adapters.md#future-enhancement-active-backup-bond), ports 1–3 and 8 (and MikroTik `ether8`) also need VLANs 10, 20, 30, 40 tagged.
+Ports 1–3 are on VLAN 40 so [UpSnap](../services/upsnap.md) (VLAN 40) can reach the onboard NICs with a broadcast; port 8 keeps VLAN 1 untagged for the switch's own management address. See [Wake-on-LAN](../network/usb-2.5g-adapters.md#wake-on-lan-onboard-nics).
+
+For the onboard NICs to be usable for failback or the [active-backup bond](../network/usb-2.5g-adapters.md#future-enhancement-active-backup-bond), ports 1–3 would have to become trunks (VLAN 1 untagged, 10–40 tagged), and port 8 and MikroTik `ether8` would need VLANs 10, 20, 30 added.

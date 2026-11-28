@@ -3,7 +3,7 @@
 ## Layout
 
 - **Core:** MikroTik CRS310-8G+2S+IN (management IP `192.168.1.2`) does switching, VLANs, and inter-VLAN routing. VLAN plan in [ip-plan.md](../inventory/ip-plan.md).
-- **Secondary switch:** SODOLA SL902-SWTGW218AS (managed), management IP `192.168.1.3` on VLAN 1. Uplink: SODOLA port 8 ↔ MikroTik `ether8`. Ports 1–3 take the Proxmox hosts' onboard 1G NICs (`pvemaster1`, `pvenode1`, `pvenode2`), used for [Wake-on-LAN](usb-2.5g-adapters.md#wake-on-lan-onboard-nics). See the [SODOLA port map](../inventory/hardware.md#sodola-port-map). TODO: what else hangs off it.
+- **Secondary switch:** SODOLA SL902-SWTGW218AS (managed), management IP `192.168.1.3` on VLAN 1. Uplink: SODOLA port 8 ↔ MikroTik `ether8`. Ports 1–3 take the Proxmox hosts' onboard 1G NICs (`pvemaster1`, `pvenode1`, `pvenode2`), used for [Wake-on-LAN](usb-2.5g-adapters.md#wake-on-lan-onboard-nics), on access VLAN 40; port 8 is a trunk (VLAN 1 untagged, 40 tagged). See the [SODOLA port map](../inventory/hardware.md#sodola-port-map). TODO: what else hangs off it.
 - **Proxmox hosts:** each node's USB 2.5G adapter ([write-up](usb-2.5g-adapters.md)) backs `vmbr1`, a VLAN-aware bridge trunking VLANs 10/20/30/40. Management IP and per-VLAN host IPs live on `vmbr1`. `vmbr0`/`nic0` stay configured with no IP as a fallback.
 - TODO: export and commit the MikroTik config (`/export hide-sensitive file=mikrotik`) to a `network/mikrotik.rsc`.
 

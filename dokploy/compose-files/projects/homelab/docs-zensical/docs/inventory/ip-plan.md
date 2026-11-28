@@ -41,7 +41,7 @@ On all three nodes, host IPs live on `vmbr1` (USB 2.5G adapter) and its VLAN sub
 | `pvenode1` | 192.168.1.91 | 192.168.10.6 | 192.168.20.6 | 192.168.30.6 | 192.168.40.6 | ether3 |
 | `pvenode2` | 192.168.1.92 | 192.168.10.7 | 192.168.20.7 | 192.168.30.7 | 192.168.40.7 | ether4 |
 
-**Onboard NIC (`vmbr0`):** no IPs. The onboard NICs are cabled to the SODOLA for [Wake-on-LAN](../network/usb-2.5g-adapters.md#wake-on-lan-onboard-nics) only. They briefly had `192.168.1.100`–`.102` on 2026-11-27, removed the same day on all three nodes.
+**Onboard NIC (`vmbr0`):** no IPs. The onboard NICs are cabled to the SODOLA for [Wake-on-LAN](../network/usb-2.5g-adapters.md#wake-on-lan-onboard-nics) only, on access ports in VLAN 40 (since 2026-11-27). They briefly had `192.168.1.100`–`.102` on 2026-11-27, removed the same day on all three nodes.
 
 All subnets are /24. Pattern: each new node takes the previous node's addresses +1 — `.90`, `.91`, `.92` on VLAN 1 and `.5`, `.6`, `.7` on VLANs 10–40. `pvenode2` is the third node.
 
